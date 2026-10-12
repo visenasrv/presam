@@ -231,7 +231,7 @@ h1, h2, h3, p { margin: 0; }
 
 .fab {
   position: fixed; z-index: 35; right: max(var(--gutter), calc(50% - 280px + var(--gutter)));
-  bottom: calc(var(--bottomnav-h) + var(--safe-b) + 16px);
+  bottom: calc(var(--bottomnav-h) + var(--safe-b) + 30px);
   height: 56px; padding: 0 22px 0 18px; border-radius: 18px; display: inline-flex; align-items: center; gap: 10px;
   background: var(--primary); color: var(--on-primary); font-weight: 700; font-size: 15.5px; box-shadow: var(--shadow-raised);
   transition: transform .12s;
@@ -576,7 +576,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width
 .sheet-option.danger { color: var(--danger); }
 .sheet-option.danger .s-ic { background: var(--err-bg); color: var(--danger); }
 
-.toasts { position: fixed; left: 0; right: 0; z-index: 95; bottom: calc(var(--bottomnav-h) + var(--safe-b) + 18px); display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; padding: 0 16px; }
+.toasts { position: fixed; left: 0; right: 0; z-index: 95; bottom: calc(var(--bottomnav-h) + var(--safe-b) + 44px); display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; padding: 0 16px; }
 .toasts.high { bottom: calc(150px + var(--safe-b)); }
 .toast {
   pointer-events: auto; display: flex; align-items: center; gap: 10px; max-width: 460px; padding: 12px 16px; border-radius: 14px;
@@ -625,3 +625,41 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
 }
+
+/* ---------- Pemilih bulan (dashboard) ---------- */
+.mp-head { display: flex; align-items: center; justify-content: space-between; margin: 4px 0 12px; }
+.mp-head b { font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.mp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.mp-m { height: 62px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; transition: background .12s; }
+.mp-m b { font-size: 15.5px; font-weight: 700; }
+.mp-m small { font-size: 11.5px; color: var(--text-muted); }
+.mp-m.now { border-color: var(--primary); }
+.mp-m.on { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+.mp-m.on small { color: inherit; opacity: .85; }
+.mp-m[disabled] { opacity: .35; }
+
+/* ---------- Tombol Presensi di tengah navigasi bawah ---------- */
+.nav-item.center { color: var(--primary); font-weight: 700; justify-content: flex-end; padding-bottom: 9px; }
+.nav-item.center .nav-ic {
+  width: 64px; height: 64px; border-radius: 50%; margin-top: -30px; margin-bottom: 1px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 88%, #fff) 0%, var(--primary) 100%);
+  color: var(--on-primary); border: 4px solid var(--surface);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--primary) 38%, transparent);
+  transition: transform .15s, box-shadow .15s;
+}
+.nav-item.center.active .nav-ic { background: var(--primary-hover); box-shadow: 0 0 0 4px var(--primary-soft), 0 8px 18px color-mix(in srgb, var(--primary) 38%, transparent); }
+.nav-item.center:active .nav-ic { transform: scale(.93); }
+.nav-item.center .nav-badge { top: -26px; left: calc(50% + 14px); }
+
+/* ---------- Hapus riwayat (mode pilih) ---------- */
+.rw-card { cursor: pointer; }
+.rw-card .rw-menu { width: 34px; height: 34px; margin: -6px -8px -6px 0; }
+.rw-card .chk { width: 26px; height: 26px; margin-right: 2px; }
+.rw-card.picked { border: 1.5px solid var(--danger); box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 15%, transparent); }
+.rw-card.picked .chk { background: var(--danger); border-color: var(--danger); color: #fff; }
+.sel-bar {
+  position: fixed; z-index: 41; left: 50%; transform: translateX(-50%); width: min(528px, calc(100% - 32px));
+  bottom: calc(var(--bottomnav-h) + var(--safe-b) + 40px); display: flex; align-items: center; gap: 10px; justify-content: space-between;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 10px 12px; box-shadow: var(--shadow-raised);
+}
+.sel-bar .btn-text { flex: 1; text-align: center; }

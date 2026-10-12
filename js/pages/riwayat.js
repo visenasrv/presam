@@ -6,27 +6,81 @@
 Pages.riwayat = {
   nav: 'riwayat',
   f: { q: '', tingkat: '', status: '', from: '', to: '', label: 'Semua' },
-  limit: 30,
+  limit: 30, selecting: false, sel: new Set(),
 
   mount(el) {
     el.innerHTML =
-      '<div class="page-head"><h1 class="h1">Riwayat Kegiatan</h1><div class="page-sub">Arsip sambung kelompok, desa &amp; daerah</div></div>' +
+      '<div class="page-head" style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div><h1 class="h1">Riwayat Kegiatan</h1><div class="page-sub">Arsip sambung kelompok, desa &amp; daerah</div></div>' +
+        '<button class="btn btn-ghost btn-sm js-pick" style="margin-top:4px" hidden>' + ic('check-check', 18) + 'Pilih</button></div>' +
       '<div class="search input-wrap">' + ic('search', 20) + '<input class="input js-q" type="search" placeholder="Cari judul atau tempat…" autocomplete="off" aria-label="Cari kegiatan"></div>' +
       '<div class="chips js-filters" style="margin-bottom:4px"></div>' +
-      '<div class="js-list"></div>';
+      '<div class="js-list"></div>' +
+      '<div class="sel-bar js-selbar" hidden><button class="btn btn-ghost btn-sm" data-selcancel>Batal</button><button class="btn-text" data-selall>Pilih semua</button>' +
+        '<button class="btn btn-danger solid btn-sm js-seldel" data-seldel disabled>' + ic('trash-2', 16) + 'Hapus</button></div>';
     this.el = el;
     const q = $('.js-q', el);
     q.addEventListener('input', debounce(() => { this.f.q = norm(q.value); this.limit = 30; this.renderList(); }, 120));
     el.addEventListener('change', (e) => {
       if (e.target.matches('[data-f]')) { this.f[e.target.dataset.f] = e.target.value; this.limit = 30; this.render(); }
     });
+    $('.js-pick', el).onclick = () => this.setSelecting(!this.selecting);
     el.addEventListener('click', (e) => {
+      const menu = e.target.closest('[data-kmenu]'), card = e.target.closest('[data-kid]');
+      if (menu) { e.stopPropagation(); this.cardMenu(menu.dataset.kmenu); return; }
+      if (e.target.closest('[data-selcancel]')) { this.setSelecting(false); return; }
+      if (e.target.closest('[data-selall]')) { this.filtered().slice(0, this.limit).forEach((k) => this.sel.add(k.id)); this.renderList(); return; }
+      if (e.target.closest('[data-seldel]')) { this.removeMany([...this.sel]); return; }
+      if (card) {
+        if (this.selecting) { const id = card.dataset.kid; this.sel.has(id) ? this.sel.delete(id) : this.sel.add(id); haptic(6); this.renderList(); }
+        else location.hash = card.dataset.href;
+        return;
+      }
       if (e.target.closest('[data-date]')) this.dateSheet();
       else if (e.target.closest('[data-more]')) { this.limit += 40; this.renderList(); }
       else if (e.target.closest('[data-reset]')) { this.f = { q: '', tingkat: '', status: '', from: '', to: '', label: 'Semua' }; q.value = ''; this.render(); }
     });
   },
-  show() { this.render(); },
+  show() { this.setSelecting(false, true); this.render(); },
+  hide() { this.setSelecting(false, true); },
+
+  setSelecting(on, silent) {
+    this.selecting = on && Store.isUtama();
+    this.sel.clear();
+    const el = this.el;
+    $('.js-selbar', el).hidden = !this.selecting;
+    $('.js-pick', el).innerHTML = this.selecting ? ic('x', 18) + 'Batal' : ic('check-check', 18) + 'Pilih';
+    if (!silent) this.renderList();
+  },
+
+  cardMenu(id) {
+    const k = S.kegiatan.get(id);
+    if (!k) return;
+    Sheet.menu({
+      title: k.judul,
+      items: [
+        { icon: k.status === 'SELESAI' ? 'file-text' : 'clipboard-check', label: k.status === 'SELESAI' ? 'Buka detail & laporan' : 'Lanjutkan absen', onClick: () => (location.hash = this.href(k)) },
+        { icon: 'check-check', label: 'Pilih beberapa untuk dihapus', onClick: () => { this.setSelecting(true); this.sel.add(id); this.renderList(); } },
+        { icon: 'trash-2', label: 'Hapus riwayat ini', danger: true, onClick: () => this.removeMany([id]) }
+      ]
+    });
+  },
+
+  async removeMany(ids) {
+    if (!ids.length || !Store.isUtama()) return;
+    const one = ids.length === 1 ? S.kegiatan.get(ids[0]) : null;
+    const ok = await Sheet.confirm({
+      title: one ? 'Hapus riwayat ini?' : 'Hapus ' + ids.length + ' riwayat kegiatan?',
+      message: (one ? '"' + one.judul + '" (' + Fmt.short(one.tanggal) + ')' : ids.length + ' kegiatan terpilih') +
+        ' beserta presensinya tidak tampil lagi di aplikasi. Data tetap tercatat di Google Sheets sebagai arsip.',
+      ok: 'Hapus', danger: true
+    });
+    if (!ok) return;
+    await Store.mutateMany(ids.map((id) => ['kegiatan.delete', 'kgd:' + id, { id }]));
+    this.setSelecting(false);
+    Toast.show(ids.length === 1 ? 'Riwayat dihapus' : ids.length + ' riwayat dihapus');
+  },
+
+  href(k) { return '#/' + (k.status === 'SELESAI' ? 'detail/' : 'absen/') + k.id; },
   onData() { this.renderList(); },
 
   render() { this.renderFilters(); this.renderList(); },
@@ -52,6 +106,10 @@ Pages.riwayat = {
 
   renderList() {
     const list = this.filtered(), box = $('.js-list', this.el);
+    $('.js-pick', this.el).hidden = !Store.isUtama() || !list.length;
+    const db = $('.js-seldel', this.el);
+    db.disabled = !this.sel.size;
+    db.innerHTML = ic('trash-2', 16) + 'Hapus' + (this.sel.size ? ' (' + this.sel.size + ')' : '');
     const any = Store.kegiatanAll().length;
     if (!list.length) {
       box.innerHTML = any
@@ -75,13 +133,16 @@ Pages.riwayat = {
     const st = Store.stats(k.id);
     const pdf = k.pdf ? (k.pdfStale ? '<span class="pill sm warn">' + ic('file-text', 13) + 'PDF perlu diperbarui</span>' : '<span style="color:var(--primary);font-weight:600;display:inline-flex;gap:5px;align-items:center">' + ic('file-text', 16) + 'PDF ✓</span>')
       : '<span class="muted" style="font-style:italic;display:inline-flex;gap:5px;align-items:center">' + ic('file-text', 16) + 'Belum dibuat PDF</span>';
-    return '<a class="card tap" style="display:block;color:inherit" href="#/' + (k.status === 'SELESAI' ? 'detail/' : 'absen/') + esc(k.id) + '">' +
-      '<div class="pill-row between">' + UI.lvl(k.tingkat) + UI.status(k) + '</div>' +
+    const on = this.sel.has(k.id), utama = Store.isUtama();
+    return '<div class="card tap rw-card' + (this.selecting ? ' selecting' : '') + (on ? ' picked' : '') + '" role="' + (this.selecting ? 'checkbox' : 'link') + '"' + (this.selecting ? ' aria-checked="' + on + '"' : '') +
+      ' data-kid="' + esc(k.id) + '" data-href="' + esc(this.href(k)) + '" tabindex="0">' +
+      '<div class="pill-row between">' + (this.selecting ? '<span class="chk">' + ic('check', 16, '', 3) + '</span>' : '') + UI.lvl(k.tingkat) + '<span style="flex:1"></span>' + UI.status(k) +
+        (utama && !this.selecting ? '<button class="icon-btn plain rw-menu" data-kmenu="' + esc(k.id) + '" aria-label="Aksi riwayat">' + ic('ellipsis-vertical', 20) + '</button>' : '') + '</div>' +
       '<div class="card-title">' + esc(k.judul) + '</div>' +
-      '<div class="meta-row">' + ic('clock', 15) + '<span class="ellipsis">' + esc(Fmt.short(k.tanggal) + ' · ' + k.jam + ' · ' + k.tempat) + '</span></div>' +
+      '<div class="meta-row">' + ic('clock', 15) + '<span class="ellipsis">' + esc([Fmt.short(k.tanggal), k.jam, k.tempat].filter(Boolean).join(' · ')) + '</span></div>' +
       '<div class="att-box"><div class="row1"><span class="num">Hadir ' + st.total + '/' + st.jml + '</span><span class="pct num">' + Fmt.pct(st.total, st.jml) + '</span></div>' + UI.progress(st.pct) + '</div>' +
       '<div class="link-row">' + pdf + '<span class="btn-text" style="padding:0">' + (k.status === 'SELESAI' ? 'Buka Detail' : 'Lanjutkan') + ' →</span></div>' +
-    '</a>';
+    '</div>';
   },
 
   dateSheet() {

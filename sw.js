@@ -3,7 +3,7 @@
    Naikkan VERSION setiap kali memperbarui berkas di GitHub agar HP
    mengambil versi terbaru (muncul tombol "Muat ulang" di aplikasi).
    ===================================================================== */
-const VERSION = 'ps-v1.0.0';
+const VERSION = 'ps-v1.1.0';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest',
   'css/style.css',

@@ -70,7 +70,7 @@ Pages.absen = {
 
   renderHead(kg) {
     const el = this.el;
-    $('.js-info', el).textContent = Fmt.shortY(kg.tanggal) + ' · ' + kg.jam + ' · ' + kg.tempat;
+    $('.js-info', el).textContent = [Fmt.shortY(kg.tanggal), kg.jam, kg.tempat].filter(Boolean).join(' · ');
     const d = $('.js-draft', el);
     d.innerHTML = kg.status === 'SELESAI' ? ic('check', 14) + 'Selesai · edit' : ic('check', 14) + 'Draft · tersimpan';
     d.className = 'pill sm js-draft ' + (kg.status === 'SELESAI' ? '' : 'ok');

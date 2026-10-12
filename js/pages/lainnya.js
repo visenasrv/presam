@@ -21,9 +21,10 @@ Pages.lainnya = {
       else if (a === 'addp') this.addPenerobos();
       else if (a === 'resetp') this.resetPin(t.dataset.id);
       else if (a === 'delp') this.delPenerobos(t.dataset.id);
+      else if (a === 'pmenu') this.penerobosMenu(t.dataset.id);
       else if (a === 'reload') this.reload(t);
       else if (a === 'logout') App.logout();
-      else if (a === 'theme') { Theme.set(t.dataset.v); this.render(); }
+      else if (a === 'rename') this.rename(t.dataset.id || (S.me && S.me.id));
     });
     Bus.on('sync', () => { if (App.route && App.route.name === 'lainnya') this.renderSync(); });
   },
@@ -31,30 +32,29 @@ Pages.lainnya = {
   onData() { this.render(); },
 
   render() {
-    const me = S.me || {}, utama = Store.isUtama(), th = Theme.get();
+    const me = S.me || {}, utama = Store.isUtama();
     const pnr = Object.values(S.pnr).filter((p) => p.aktif).sort((a, b) => (a.peran === 'UTAMA' ? -1 : b.peran === 'UTAMA' ? 1 : collator.compare(a.nama, b.nama)));
     const row = (act, icon, title, sub, green) => '<button class="settings-row" data-act="' + act + '"><span class="s-ic ' + (green ? 'green' : '') + '">' + ic(icon, 20) + '</span><span class="row-main"><span class="s-title" style="display:block">' + title + '</span>' + (sub ? '<span class="s-sub" style="display:block">' + sub + '</span>' : '') + '</span>' + ic('chevron-right', 18, 'chev') + '</button>';
     const tpl = S.cfg.template_wa === DEFAULT_TEMPLATE_WA ? 'Template bawaan' : 'Template khusus';
     this.el.innerHTML =
       '<div class="card profile"><span class="avatar">' + esc(Fmt.initials(me.nama)) + '</span><div class="row-main"><div class="nm">' + esc(me.nama) + '</div>' +
-        '<div class="muted" style="font-size:14px">Kelompok ' + esc(S.cfg.nama_kelompok || '—') + '</div></div>' +
-        (utama ? '<span class="badge-utama">' + ic('shield-check', 14) + 'Utama</span>' : '<span class="pill outline">Penerobos</span>') + '</div>' +
+        '<div class="muted" style="font-size:14px">Kelompok ' + esc(S.cfg.nama_kelompok || '—') + '</div>' +
+        '<div style="margin-top:8px">' + (utama ? '<span class="badge-utama">' + ic('shield-check', 14) + 'Penerobos Utama</span>' : '<span class="pill outline">Penerobos</span>') + '</div></div>' +
+        (utama ? '<button class="icon-btn" data-act="rename" aria-label="Ubah nama">' + ic('pencil', 18) + '</button>' : '') + '</div>' +
       '<div class="card js-sync"></div>' +
       '<div class="card"><div class="card-label">Akun</div>' +
         row('pin', 'lock', 'Ganti PIN', 'Amankan akses masuk pribadi') +
-        '<div class="settings-row" style="cursor:default"><span class="s-ic">' + ic('sun-moon', 20) + '</span><span class="s-title" style="flex:1">Tampilan</span>' +
-          '<div class="seg soft" style="width:210px">' + [['light', 'Terang'], ['dark', 'Gelap'], ['system', 'Ikuti HP']].map((x) => '<button data-act="theme" data-v="' + x[0] + '" class="' + (th === x[0] ? 'on' : '') + '">' + x[1] + '</button>').join('') + '</div></div>' +
       '</div>' +
       (utama ? '<div class="card"><div class="card-label">Pengaturan <span class="badge-utama" style="height:22px;font-size:10.5px">Penerobos Utama</span></div>' +
         row('kelompok', 'building-2', 'Nama Kelompok', esc(S.cfg.nama_kelompok || '—'), true) +
-        '<a class="settings-row highlight" href="#/format" style="color:inherit;margin:4px 0"><span class="s-ic" style="background:var(--primary);color:var(--on-primary)">' + ic('message-square', 20) + '</span><span class="row-main"><span class="s-title" style="display:block">Format Laporan WA</span><span class="s-sub" style="display:block">' + tpl + ' · teks WhatsApp &amp; opsi PDF</span></span><span class="btn-text" style="padding:0">Atur</span>' + ic('chevron-right', 18, 'chev') + '</a>' +
-        '<a class="settings-row" href="#/format/pdf" style="color:inherit"><span class="s-ic green">' + ic('file-text', 20) + '</span><span class="row-main"><span class="s-title" style="display:block">Opsi PDF</span><span class="s-sub" style="display:block">Daftar tidak hadir: ' + (S.cfg.pdf_tampilkan_tidak_hadir ? 'Ditampilkan' : 'Tidak ditampilkan') + '</span></span>' + ic('chevron-right', 18, 'chev') + '</a>' +
+        '<a class="settings-row highlight" href="#/format" style="color:inherit;margin:4px 0"><span class="s-ic" style="background:var(--primary);color:var(--on-primary)">' + ic('message-square', 20) + '</span><span class="row-main"><span class="s-title" style="display:block">Format Laporan WA/PDF</span>' +
+          '<span class="s-sub" style="display:block">' + tpl + ' · PDF ' + (S.cfg.pdf_tampilkan_tidak_hadir ? 'dengan' : 'tanpa') + ' daftar tidak hadir</span></span><span class="btn-text" style="padding:0">Atur</span>' + ic('chevron-right', 18, 'chev') + '</a>' +
         row('ambang', 'sliders-horizontal', 'Ambang Dashboard', '&lt; ' + S.cfg.ambang_sering_tidak_hadir + '% dari ' + S.cfg.jumlah_kegiatan_evaluasi + ' kegiatan terakhir', true) +
       '</div>' +
       '<div class="card"><div class="card-label">Kelola Penerobos <span class="aside" style="text-transform:none;letter-spacing:0;font-weight:600">' + pnr.length + '/3</span></div>' +
         pnr.map((p) => '<div class="list-row"><span class="avatar sm">' + esc(Fmt.initials(p.nama)) + '</span><div class="row-main"><div class="row-title">' + esc(p.nama) + (p.id === me.id ? ' <span class="muted" style="font-weight:500">(Anda)</span>' : '') + '</div>' +
           '<div class="row-sub">' + (p.peran === 'UTAMA' ? 'Penerobos Utama' : 'Penerobos') + (p.login ? ' · masuk ' + esc(p.login.slice(0, 10).split('-').reverse().join('/')) : '') + '</div></div>' +
-          (p.peran !== 'UTAMA' ? '<button class="btn-text" data-act="resetp" data-id="' + esc(p.id) + '">Reset PIN</button><button class="btn-text" style="color:var(--danger);margin-left:6px" data-act="delp" data-id="' + esc(p.id) + '">Hapus</button>' : '') + '</div>').join('') +
+          '<button class="icon-btn plain" data-act="pmenu" data-id="' + esc(p.id) + '" aria-label="Aksi ' + esc(p.nama) + '">' + ic('ellipsis-vertical', 20) + '</button></div>').join('') +
         (pnr.length < 3 ? '<button class="btn btn-ghost btn-block" style="margin-top:10px;border-style:dashed" data-act="addp">' + ic('user-plus', 18) + 'Tambah Penerobos</button>' : '<p class="help">Maksimal 2 Penerobos selain Penerobos Utama.</p>') +
       '</div>' : '') +
       '<div class="card"><div class="card-label">Data</div>' +
@@ -210,6 +210,44 @@ Pages.lainnya = {
     });
   },
 
+  penerobosMenu(id) {
+    const p = S.pnr[id];
+    if (!p) return;
+    const items = [{ icon: 'pencil', label: 'Ubah nama', onClick: () => this.rename(id) }];
+    if (p.peran !== 'UTAMA') items.push(
+      { icon: 'key-round', label: 'Reset PIN', onClick: () => this.resetPin(id) },
+      { icon: 'trash-2', label: 'Hapus Penerobos', danger: true, onClick: () => this.delPenerobos(id) });
+    Sheet.menu({ title: p.nama + (p.peran === 'UTAMA' ? ' · Penerobos Utama' : ''), items });
+  },
+
+  rename(id) {
+    if (!this.online()) return;
+    const p = S.pnr[id] || (S.me && S.me.id === id ? S.me : null);
+    if (!p) return;
+    Sheet.open({
+      title: 'Ubah Nama',
+      message: (p.peran === 'UTAMA' ? 'Nama Penerobos Utama' : 'Nama Penerobos') + ' tampil di aplikasi dan di laporan PDF.',
+      html: '<form id="rnForm"><div class="field"><input class="input" id="rnNama" maxlength="60" autocapitalize="words" value="' + esc(p.nama) + '" autofocus></div>' +
+        '<div class="error-text" id="rnErr" hidden></div><div class="btn-row"><button type="button" class="btn btn-ghost" data-x>Batal</button><button class="btn btn-primary grow">' + ic('check', 18) + 'Simpan</button></div></form>',
+      onMount: (el, s) => {
+        $('[data-x]', el).onclick = () => s.close();
+        $('#rnForm', el).onsubmit = async (e) => {
+          e.preventDefault();
+          const nama = $('#rnNama', el).value.replace(/\s+/g, ' ').trim(), er = $('#rnErr', el);
+          if (!nama) { er.hidden = false; er.textContent = 'Nama wajib diisi.'; return; }
+          if (nama === p.nama) { s.close(); return; }
+          const b = e.submitter || $('button.btn-primary', el); b.disabled = true;
+          const r = await api('penerobos.rename', { id, nama });
+          b.disabled = false;
+          if (!r.ok) { er.hidden = false; er.textContent = r.error; return; }
+          s.close();
+          await this.refreshPenerobos();
+          Toast.show('Nama diubah menjadi ' + nama);
+        };
+      }
+    });
+  },
+
   async delPenerobos(id) {
     if (!this.online()) return;
     const p = S.pnr[id];
@@ -266,7 +304,7 @@ Pages.format = {
     $('.js-preview', this.el).innerHTML = Report.toHtml(Report.render(v, kg ? Report.vars(kg) : Report.sampleVars()));
     $('.js-pvsrc', this.el).textContent = kg ? 'Kegiatan terakhir' : 'Contoh data';
     const d = this.dirty();
-    $('.js-head', this.el).innerHTML = UI.focusHead({ title: 'Format Laporan', sub: 'Template WhatsApp & PDF', right: d ? '<span class="pill ok">' + ic('save', 14) + 'Belum disimpan</span>' : '' });
+    $('.js-head', this.el).innerHTML = UI.focusHead({ title: 'Format Laporan WA/PDF', sub: 'Template WhatsApp & opsi PDF', right: d ? '<span class="pill ok">' + ic('save', 14) + 'Belum disimpan</span>' : '' });
     if (this.ta.value !== (S.cfg.template_wa || DEFAULT_TEMPLATE_WA)) LS.set('tplDraft', this.ta.value); else LS.del('tplDraft');
   },
   insert(text) {

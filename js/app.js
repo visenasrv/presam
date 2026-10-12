@@ -110,8 +110,11 @@ const App = {
         '<main class="view" id="view"></main>' +
       '</div>' +
       '<nav class="bottomnav" id="bottomNav" aria-label="Navigasi utama"><div class="bottomnav-inner">' +
-        [['beranda', 'house', 'Beranda'], ['presensi', 'clipboard-check', 'Presensi'], ['peserta', 'users', 'Peserta'], ['riwayat', 'history', 'Riwayat'], ['lainnya', 'menu', 'Lainnya']]
-          .map((n) => '<a class="nav-item" href="#/' + n[0] + '" data-nav="' + n[0] + '"><span class="nav-ic">' + ic(n[1], 23) + '</span>' + n[2] + '</a>').join('') +
+        [['beranda', 'house', 'Beranda'], ['peserta', 'users', 'Peserta'], ['presensi', 'clipboard-check', 'Presensi'], ['riwayat', 'history', 'Riwayat'], ['lainnya', 'menu', 'Lainnya']]
+          .map((n) => {
+            const center = n[0] === 'presensi';   // tombol utama: di tengah, lebih besar
+            return '<a class="nav-item' + (center ? ' center' : '') + '" href="#/' + n[0] + '" data-nav="' + n[0] + '"><span class="nav-ic">' + ic(n[1], center ? 30 : 23, '', center ? 2 : 1.75) + '</span>' + n[2] + '</a>';
+          }).join('') +
       '</div></nav>';
     this.view = $('#view');
     this.top = $('#mainTop');

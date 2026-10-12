@@ -7,5 +7,5 @@
  */
 window.APP_CONFIG = {
   API_URL: 'https://script.google.com/macros/s/AKfycbxYunvfi2YSKj1OAyFl7rmEe34NSjKcrGVgtB4-7bq_AyQAXIcnnS5sT7r8W7UU4TuYAg/exec',
-  APP_VERSION: '1.0.0'
+  APP_VERSION: '1.1.0'
 };

@@ -59,7 +59,7 @@ Pages.detail = {
       '<div class="card"><div class="pill-row">' + UI.lvl(kg.tingkat) + UI.status(kg) + '</div>' +
         '<h2 class="detail-title">' + esc(kg.judul) + '</h2>' +
         '<div class="kv">' + ic('calendar', 19) + esc(Fmt.long(kg.tanggal)) + '</div>' +
-        '<div class="kv">' + ic('clock', 19) + esc(kg.jam) + ' WITA</div>' +
+        (kg.jam ? '<div class="kv">' + ic('clock', 19) + esc(kg.jam) + ' WITA</div>' : '') +
         '<div class="kv">' + ic('map-pin', 19) + esc(kg.tempat) + '</div>' +
         '<div class="kv" style="color:var(--text-muted);font-size:13.5px">' + ic('user', 19) + 'Dibuat oleh ' + esc(Store.nameOf(kg.by)) + '</div>' +
       '</div>' +

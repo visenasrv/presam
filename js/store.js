@@ -230,7 +230,7 @@ const Store = {
   /* ---------- Data turunan ---------- */
   kegiatanAll() {
     return memo('kgAll', () => [...S.kegiatan.values()].filter((k) => !k.del)
-      .sort((a, b) => (b.tanggal + b.jam).localeCompare(a.tanggal + a.jam)));
+      .sort((a, b) => (b.tanggal + (b.jam || '')).localeCompare(a.tanggal + (a.jam || ''))));
   },
   pesertaAll() { return memo('psAll', () => [...S.peserta.values()].sort(byNama)); },
   pesertaAktif() { return memo('psAktif', () => this.pesertaAll().filter((p) => p.status !== 'DIHAPUS')); },

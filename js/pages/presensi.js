@@ -10,7 +10,7 @@ function kegiatanCard(k, opt) {
   return '<div class="card ' + (draft && opt.active ? 'active' : '') + '">' +
     '<div class="pill-row between">' + UI.lvl(k.tingkat) + UI.status(k) + '</div>' +
     '<div class="card-title">' + esc(k.judul) + '</div>' +
-    '<div class="meta-row">' + ic('clock', 16) + '<span class="num">' + esc(k.jam) + '</span><span class="sep"></span>' + ic('map-pin', 16) + '<span class="ellipsis">' + esc(k.tempat) + '</span></div>' +
+    '<div class="meta-row">' + (k.jam ? ic('clock', 16) + '<span class="num">' + esc(k.jam) + '</span><span class="sep"></span>' : '') + ic('map-pin', 16) + '<span class="ellipsis">' + esc(k.tempat) + '</span></div>' +
     '<div class="att-box"><div class="row1"><span class="num">Hadir ' + st.total + '/' + st.jml + '</span><span class="pct num">' + Fmt.pct(st.total, st.jml) + '</span></div>' +
       '<div class="progress"><span style="width:' + Math.min(100, st.pct).toFixed(1) + '%"></span></div>' +
       '<div class="row2"><span>Dibuat oleh ' + esc(Store.nameOf(k.by)) + '</span><span class="num">L ' + st.L + ' · P ' + st.P + '</span></div></div>' +
@@ -30,7 +30,7 @@ Pages.presensi = {
   render(el) {
     const today = Fmt.ymd();
     const all = Store.kegiatanAll();
-    const todays = all.filter((k) => k.tanggal === today).sort((a, b) => a.jam.localeCompare(b.jam));
+    const todays = all.filter((k) => k.tanggal === today).sort((a, b) => (a.jam || '99').localeCompare(b.jam || '99'));
     const drafts = all.filter((k) => k.status !== 'SELESAI' && k.tanggal !== today);
     let firstDraft = true;
     $('.js-body', el).innerHTML =
@@ -62,7 +62,9 @@ Pages.kegiatan = {
           '<button type="button" class="clear-btn" data-clear="kgJudul" hidden aria-label="Kosongkan">' + ic('x', 16) + '</button></div><datalist id="dlJudul"></datalist></div>' +
         '<div class="grid-2">' +
           '<div class="field"><label class="label" for="kgTanggal"><span>Tanggal<span class="req">*</span></span></label><input class="input num" type="date" id="kgTanggal"></div>' +
-          '<div class="field"><label class="label" for="kgJam"><span>Jam<span class="req">*</span></span></label><input class="input num" type="time" id="kgJam"></div>' +
+          '<div class="field"><label class="label" for="kgJam"><span>Jam <span class="muted" style="font-weight:500">(opsional)</span></span></label>' +
+            '<div class="input-wrap"><input class="input num" type="time" id="kgJam"><button type="button" class="clear-btn js-jamx" hidden aria-label="Kosongkan jam">' + ic('x', 16) + '</button></div>' +
+            '<button type="button" class="btn-text js-jamnow" style="font-size:13px;padding:6px 0 0">' + ic('clock', 14) + ' Isi jam sekarang</button></div>' +
         '</div>' +
         '<div class="field"><label class="label" for="kgTempat"><span>Tempat<span class="req">*</span></span><span class="err-inline" data-err="tempat" hidden></span></label>' +
           '<input class="input" id="kgTempat" maxlength="120" placeholder="contoh: Masjid Al-Ikhlas" autocomplete="off" list="dlTempat" enterkeyhint="done"><datalist id="dlTempat"></datalist>' +
@@ -79,6 +81,10 @@ Pages.kegiatan = {
     $('#kgTempat', el).addEventListener('input', () => this.clearErr('tempat'));
     $('#kgForm', el).addEventListener('submit', (e) => { e.preventDefault(); this.save(); });
     $('#kgSave', el).onclick = () => this.save();
+    const jam = $('#kgJam', el);
+    jam.addEventListener('input', () => this.jamUI());
+    $('.js-jamx', el).onclick = () => { jam.value = ''; this.jamUI(); };
+    $('.js-jamnow', el).onclick = () => { jam.value = Fmt.hm(); this.jamUI(); };
     this.el = el;
   },
   show(el, params) {
@@ -92,7 +98,8 @@ Pages.kegiatan = {
     $('#kgJudul', el).value = kg ? kg.judul : '';
     $('[data-clear]', el).hidden = !(kg && kg.judul);
     $('#kgTanggal', el).value = kg ? kg.tanggal : Fmt.ymd();
-    $('#kgJam', el).value = kg ? kg.jam : Fmt.hm();
+    $('#kgJam', el).value = kg ? kg.jam : '';
+    this.jamUI();
     $('#kgTempat', el).value = kg ? kg.tempat : LS.get('lastTempat', '');
     ['judul', 'tempat'].forEach((f) => this.clearErr(f));
     // Saran dari kegiatan sebelumnya
@@ -100,6 +107,11 @@ Pages.kegiatan = {
     $('#dlJudul', el).innerHTML = uniq('judul').map((v) => '<option value="' + esc(v) + '">').join('');
     $('#dlTempat', el).innerHTML = uniq('tempat').map((v) => '<option value="' + esc(v) + '">').join('');
     if (!kg) setTimeout(() => $('#kgJudul', el).focus({ preventScroll: true }), 200);
+  },
+  jamUI() {
+    const v = $('#kgJam', this.el).value;
+    $('.js-jamx', this.el).hidden = !v;
+    $('.js-jamnow', this.el).hidden = !!v;
   },
   setTingkat(t) {
     this.tingkat = t;
@@ -127,7 +139,8 @@ Pages.kegiatan = {
     let bad = false;
     if (!judul) { this.err('judul', 'Judul wajib diisi'); bad = true; }
     if (!tempat) { this.err('tempat', 'Tempat wajib diisi'); bad = true; }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal) || !/^\d{2}:\d{2}$/.test(jam)) { Toast.show('Tanggal dan jam wajib diisi.', 'err'); bad = true; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal)) { Toast.show('Tanggal wajib diisi.', 'err'); bad = true; }
+    if (jam && !/^\d{2}:\d{2}$/.test(jam)) { Toast.show('Format jam tidak valid.', 'err'); bad = true; }
     if (bad) { haptic([20, 30, 20]); return; }
     LS.set('lastTingkat', this.tingkat); LS.set('lastTempat', tempat);
     const id = await Store.saveKegiatan({ id: this.editId, tingkat: this.tingkat, judul, tanggal, jam, tempat });

@@ -24,7 +24,15 @@ const Report = {
     };
   },
 
-  render(tpl, vars) { return String(tpl || '').replace(/\{(\w+)\}/g, (m, k) => (Object.prototype.hasOwnProperty.call(vars, k) ? vars[k] : m)); },
+  /** Isi penanda. Baris yang penandanya kosong (mis. jam tidak diisi) dan tak tersisa teks lain → dihapus. */
+  render(tpl, vars) {
+    const has = (k) => Object.prototype.hasOwnProperty.call(vars, k);
+    return String(tpl || '').split('\n').map((line) => {
+      let any = false, empty = false;
+      const out = line.replace(/\{(\w+)\}/g, (m, k) => { if (!has(k)) return m; any = true; const v = vars[k] === undefined || vars[k] === null ? '' : String(vars[k]); if (!v) empty = true; return v; });
+      return any && empty && !/[\p{L}\p{N}]/u.test(out) ? null : out;
+    }).filter((l) => l !== null).join('\n');
+  },
 
   text(kg) { return this.render(S.cfg.template_wa || DEFAULT_TEMPLATE_WA, this.vars(kg)); },
 

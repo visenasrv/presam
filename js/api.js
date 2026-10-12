@@ -22,7 +22,7 @@ const API = {
   configured() { const u = this.url(); return !!u && u.indexOf('XXXX') < 0 && /^https?:\/\//.test(u); },
   // Aksi baca/idempoten boleh diulang otomatis
   RETRY: /^(ping|bootstrap|sync|kegiatan\.presensi|foto\.get|pdf\.get|penerobos\.list|auth\.login)$/,
-  WRITE: /^(auth\.changePin|penerobos\.(add|delete|resetPin)|foto\.(upload|delete)|pdf\.generate)$/,
+  WRITE: /^(auth\.changePin|penerobos\.(add|delete|resetPin|rename)|foto\.(upload|delete)|pdf\.generate)$/,
 
   async once(action, data, timeout, reqId) {
     const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), timeout), t0 = performance.now();
