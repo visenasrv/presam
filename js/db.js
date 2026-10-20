@@ -5,7 +5,8 @@
 'use strict';
 
 const DB = (() => {
-  const NAME = 'presensi-sambung', VER = 1;
+  // Satu HP bisa dipakai beberapa kelompok → database terpisah per Kode Kelompok
+  const NAME = window.Tenant ? Tenant.dbName('presensi-sambung') : 'presensi-sambung', VER = 1;
   const STORES = { kv: null, peserta: 'id', kegiatan: 'id', presensi: 'k', outbox: 'key', files: 'key' };
   let dbp = null;
 

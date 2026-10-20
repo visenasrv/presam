@@ -18,8 +18,9 @@ const Perf = {
 window.Perf = Perf;
 
 const API = {
-  url() { return (window.APP_CONFIG && window.APP_CONFIG.API_URL) || ''; },
-  configured() { const u = this.url(); return !!u && u.indexOf('XXXX') < 0 && /^https?:\/\//.test(u); },
+  // Alamat server kelompok aktif — dipilih lewat Kode Kelompok (tenant.js)
+  url() { return window.TENANT_URL || ''; },
+  configured() { const u = this.url(); return !!u && /^https?:\/\//.test(u); },
   // Aksi baca/idempoten boleh diulang otomatis
   RETRY: /^(ping|bootstrap|sync|kegiatan\.presensi|foto\.get|pdf\.get|penerobos\.list|auth\.login)$/,
   WRITE: /^(auth\.changePin|penerobos\.(add|delete|resetPin|rename)|foto\.(upload|delete)|pdf\.generate)$/,
@@ -47,7 +48,7 @@ const API = {
 
   async call(action, data, opt) {
     opt = opt || {};
-    if (!this.configured()) return { ok: false, error: 'Alamat server (API_URL) belum diisi di js/config.js.', code: 'NO_CONFIG' };
+    if (!this.configured()) return { ok: false, error: 'Kode Kelompok belum dipilih. Muat ulang aplikasi.', code: 'NO_CONFIG' };
     if (navigator.onLine === false && !opt.ignoreOffline) return { ok: false, network: true, offline: true, error: 'Butuh internet.' };
     const retryable = this.RETRY.test(action) || this.WRITE.test(action);
     const reqId = this.WRITE.test(action) ? (opt.reqId || uid() + uid()) : '';

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Presensi Sambung</title>
-  <meta name="description" content="Aplikasi presensi kegiatan sambung — cepat, bisa offline, laporan WhatsApp & PDF.">
+  <meta name="description" content="Aplikasi presensi sambung & musyawaroh — cepat, bisa offline, laporan WhatsApp & PDF.">
   <meta name="theme-color" content="#FFFFFF">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -18,16 +18,24 @@
   <link rel="preconnect" href="https://script.googleusercontent.com">
   <link rel="preload" href="fonts/pjs-700.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/pjs-500.woff2" as="font" type="font/woff2" crossorigin>
-  <script>
-    // Terapkan tema sebelum halaman digambar (tidak berkedip)
-    (function () { try { var t = JSON.parse(localStorage.getItem('ps:theme') || '"system"'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); } catch (e) {} })();
-  </script>
+  <!-- Satu situs banyak kelompok: tentukan server dari Kode Kelompok (sinkron, tanpa jaringan bila sudah pernah dipilih) -->
+  <script src="tenant-config.js"></script>
+  <script src="tenant.js" data-page="app"></script>
   <link rel="stylesheet" href="css/style.css">
+  <script>
+    // Terapkan mode terang/gelap & warna aplikasi kelompok sebelum halaman digambar (tidak berkedip)
+    (function () {
+      try { var t = JSON.parse(localStorage.getItem('ps:theme') || '"system"'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
+      try { var c = JSON.parse(localStorage.getItem('ps:' + (window.TENANT_NS || '') + 'temaCss') || 'null'); if (c) { var s = document.createElement('style'); s.id = 'temaVars'; s.textContent = c; document.head.appendChild(s); } } catch (e) {}
+    })();
+  </script>
   <style>
     .boot { min-height: 100dvh; display: grid; place-items: center; }
     .boot div { width: 72px; height: 72px; border-radius: 22px; background: var(--primary); display: grid; place-items: center; color: #fff; animation: bootPulse 1.2s ease-in-out infinite; }
     @keyframes bootPulse { 50% { transform: scale(.94); opacity: .85; } }
   </style>
+  <script defer src="tenant-gate.js"></script>
+  <script defer src="pwa.js"></script>
   <script defer src="js/config.js"></script>
   <script defer src="js/icons.js"></script>
   <script defer src="js/util.js"></script>
@@ -46,6 +54,7 @@
   <script defer src="js/pages/riwayat.js"></script>
   <script defer src="js/pages/peserta.js"></script>
   <script defer src="js/pages/lainnya.js"></script>
+  <script defer src="js/pages/dapukan.js"></script>
 </head>
 <body>
   <div id="app">

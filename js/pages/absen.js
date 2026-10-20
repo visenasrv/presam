@@ -15,14 +15,18 @@ Pages.absen = {
     el.innerHTML =
       '<div class="js-head"></div>' +
       '<div class="info-strip"><span style="color:var(--primary);display:inline-flex">' + ic('calendar', 18) + '</span><span class="txt js-info"></span><span class="pill sm ok js-draft"></span></div>' +
-      '<div class="tabs" role="tablist"><button class="tab" role="tab" data-tab="L">Laki-laki <span class="badge js-cL"></span></button>' +
-        '<button class="tab" role="tab" data-tab="P">Perempuan <span class="badge js-cP"></span></button></div>' +
-      '<div class="absen-tools"><div class="search input-wrap">' + ic('search', 20) +
+      '<div class="tabs js-tabs" role="tablist"></div>' +
+      '<div class="absen-tools js-tools"><div class="search input-wrap">' + ic('search', 20) +
         '<input class="input js-q" type="search" placeholder="Cari nama peserta…" autocomplete="off" enterkeyhint="search" aria-label="Cari nama">' +
         '<button class="clear-btn js-qx" hidden aria-label="Kosongkan">' + ic('x', 16) + '</button></div>' +
         '<div class="chips js-filters"></div></div>' +
       '<div class="att-list js-list"></div>' +
       '<div class="js-empty"></div>' +
+      '<div class="notulen-pane js-notulen" hidden>' +
+        '<div class="label" style="margin-bottom:8px"><span>' + ic('notebook-pen', 16) + ' Notulen / Hasil Musyawaroh</span><span class="muted js-nstat" style="font-weight:500;font-size:12.5px"></span></div>' +
+        '<textarea class="input notulen-ta js-nta" rows="12" maxlength="20000" placeholder="Tulis hasil musyawaroh di sini…\n\nContoh:\n*Keputusan*\n1. Sambung desa dipindah ke hari Ahad.\n2. Kas kelompok dinaikkan mulai bulan depan."></textarea>' +
+        '<div class="help" style="display:flex;justify-content:space-between;gap:10px"><span>Tersimpan otomatis · tulis *teks* agar tebal di WA</span><span class="num js-ncount"></span></div>' +
+      '</div>' +
       '<div class="action-bar"><div class="action-bar-inner">' +
         '<div class="counter js-counter"></div>' +
         '<button class="btn btn-primary btn-block btn-lg js-finish"></button>' +
@@ -34,7 +38,11 @@ Pages.absen = {
       const row = e.target.closest('.att-row');
       if (row) this.toggle(row.dataset.pid, row);
     });
-    $$('[data-tab]', el).forEach((b) => (b.onclick = () => this.setTab(b.dataset.tab)));
+    $('.js-tabs', el).addEventListener('click', (e) => { const b = e.target.closest('[data-tab]'); if (b) this.setTab(b.dataset.tab); });
+    const nta = $('.js-nta', el);
+    const flush = debounce(() => this.saveNotulen(), 1200);
+    nta.addEventListener('input', () => { this.nDirty = true; this.notulenStat('Menyimpan…'); $('.js-ncount', el).textContent = nta.value.length.toLocaleString('id') + ' / 20.000'; flush(); });
+    nta.addEventListener('blur', () => this.saveNotulen());
     const q = $('.js-q', el), qx = $('.js-qx', el);
     q.addEventListener('input', () => { this.q = norm(q.value); qx.hidden = !q.value; this.applyFilter(); });
     qx.onclick = () => { q.value = ''; this.q = ''; qx.hidden = true; this.applyFilter(); q.focus(); };
@@ -55,10 +63,19 @@ Pages.absen = {
       $('.action-bar', el).hidden = true; return;
     }
     $('.action-bar', el).hidden = false;
-    this.tab = LS.get('absenTab', 'L');
+    this.musy = isMusy(kg);
+    this.tab = this.musy ? (params[1] === 'notulen' ? 'N' : 'H') : LS.get('absenTab', 'L');
+    if (!this.musy && this.tab !== 'P') this.tab = 'L';
+    this.nDirty = false;
+    $('.js-nta', el).value = kg.notulen || '';
+    $('.js-ncount', el).textContent = (kg.notulen || '').length.toLocaleString('id') + ' / 20.000';
+    this.notulenStat(kg.notulen ? 'Tersimpan' : '');
+    $('.js-tabs', el).innerHTML = this.musy
+      ? '<button class="tab" role="tab" data-tab="H">' + ic('users', 17) + 'Kehadiran <span class="badge js-cH"></span></button><button class="tab" role="tab" data-tab="N">' + ic('notebook-pen', 17) + 'Notulen <span class="badge js-cN"></span></button>'
+      : '<button class="tab" role="tab" data-tab="L">Laki-laki <span class="badge js-cL"></span></button><button class="tab" role="tab" data-tab="P">Perempuan <span class="badge js-cP"></span></button>';
     this.filter = 'all'; this.q = '';
     $('.js-q', el).value = ''; $('.js-qx', el).hidden = true;
-    $('.js-head', el).innerHTML = UI.focusHead({ title: 'Absen', sub: 'Sambung ' + kg.tingkat + ' · ' + kg.judul, right: UI.pill() + '<button class="icon-btn plain" data-more aria-label="Menu lainnya">' + ic('ellipsis-vertical', 22) + '</button>' });
+    $('.js-head', el).innerHTML = UI.focusHead({ title: this.musy ? 'Absen Musyawaroh' : 'Absen', sub: UI.jenisLabel(kg) + ' · ' + kg.judul, right: UI.pill() + '<button class="icon-btn plain" data-more aria-label="Menu lainnya">' + ic('ellipsis-vertical', 22) + '</button>' });
     this.renderHead(kg);
     this.build();
     if (!Store.prLoaded(kg)) this.loadOld(kg);
@@ -66,7 +83,17 @@ Pages.absen = {
     Sync.run();
   },
 
-  hide() { if (S.outbox.size) Sync.schedule(200); },
+  hide() { this.saveNotulen(); if (S.outbox.size) Sync.schedule(200); },
+
+  /* ---------- Notulen (musyawaroh) ---------- */
+  saveNotulen() {
+    if (!this.nDirty || !this.kid) return;
+    const kg = S.kegiatan.get(this.kid), v = $('.js-nta', this.el).value;
+    this.nDirty = false;
+    if (!kg || (kg.notulen || '') === v) { this.notulenStat('Tersimpan'); return; }
+    Store.setNotulen(this.kid, v).then(() => { this.notulenStat('Tersimpan di HP'); this.counts(); });
+  },
+  notulenStat(t) { const e = $('.js-nstat', this.el); if (e) e.textContent = t ? '· ' + t : ''; },
 
   renderHead(kg) {
     const el = this.el;
@@ -83,25 +110,31 @@ Pages.absen = {
     if (!kg) return;
     const list = Store.absenList(kg);
     this.people = list;
-    this.sig = list.map((p) => p.id + p.nama).join('|');
+    this.sig = list.map((p) => p.id + p.nama + (p.dkNama || '')).join('|');
     const mp = S.presensi.get(this.kid);
-    const rows = list.filter((p) => p.jk === this.tab);
+    const rows = this.musy ? list : list.filter((p) => p.jk === this.tab);
     $$('[data-tab]', this.el).forEach((b) => { const on = b.dataset.tab === this.tab; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+    const notes = this.musy && this.tab === 'N';
+    $('.js-notulen', this.el).hidden = !notes;
+    $('.js-tools', this.el).hidden = notes;
+    this.list.hidden = notes;
+    $('.js-empty', this.el).hidden = notes;
 
     const groups = new Map();
     rows.forEach((p) => {
-      const ch = (p.nama.trim()[0] || '#').toUpperCase();
-      const k = /[A-Z]/.test(ch) ? ch : '#';
+      let k;
+      if (this.musy) k = p.dkNama;
+      else { const ch = (p.nama.trim()[0] || '#').toUpperCase(); k = /[A-Z]/.test(ch) ? ch : '#'; }
       if (!groups.has(k)) groups.set(k, []);
       groups.get(k).push(p);
     });
     let html = '', no = 0;
     groups.forEach((arr, letter) => {
-      html += '<div class="letter" data-letter="' + letter + '"><span>HURUF ' + letter + '</span><span class="js-ln">' + arr.length + ' nama</span></div>';
+      html += '<div class="letter" data-letter="' + esc(letter) + '"><span>' + (this.musy ? esc(letter).toUpperCase() : 'HURUF ' + letter) + '</span><span class="js-ln">' + arr.length + ' nama</span></div>';
       arr.forEach((p) => {
         no++;
         const r = mp && mp.get(p.id);
-        html += '<button class="att-row" data-pid="' + esc(p.id) + '" data-l="' + letter + '" data-n="' + esc(norm(p.nama)) + '" role="checkbox" aria-checked="false">' +
+        html += '<button class="att-row" data-pid="' + esc(p.id) + '" data-l="' + esc(letter) + '" data-n="' + esc(norm(p.nama)) + '" role="checkbox" aria-checked="false">' +
           '<span class="chk">' + ic('check', 18, '', 3) + '</span>' +
           '<span class="row-main"><span class="att-name">' + esc(p.nama) + '</span><span class="att-sub"><span class="st"></span></span></span>' +
           '<span class="att-no">' + p2(no) + '</span></button>';
@@ -111,8 +144,10 @@ Pages.absen = {
     this.rows = new Map();
     $$('.att-row', this.list).forEach((r) => this.rows.set(r.dataset.pid, r));
     this.rows.forEach((row, pid) => this.paintRow(row, mp && mp.get(pid)));
-    $('.js-empty', this.el).innerHTML = list.length ? '' :
-      emptyState('people', 'Belum ada peserta', Store.isUtama() ? 'Tambahkan peserta atau impor dari Excel terlebih dahulu.' : 'Minta Penerobos Utama menambahkan peserta.',
+    $('.js-empty', this.el).innerHTML = list.length ? '' : this.musy
+      ? emptyState('people', 'Belum ada anggota musyawaroh', Store.isUtama() ? 'Tetapkan dapukan (Pak Yai, Wakil Yai, Penerobos, Aghnia, …) untuk peserta yang ikut musyawaroh.' : 'Minta Penerobos Utama mengatur dapukan musyawaroh.',
+          Store.isUtama() ? '<a class="btn btn-primary" href="#/dapukan">' + ic('users-round', 20) + 'Atur Dapukan</a>' : '')
+      : emptyState('people', 'Belum ada peserta', Store.isUtama() ? 'Tambahkan peserta atau impor dari Excel terlebih dahulu.' : 'Minta Penerobos Utama menambahkan peserta.',
         Store.isUtama() ? '<a class="btn btn-primary" href="#/peserta">' + ic('user-plus', 20) + 'Kelola Peserta</a>' : '');
     this.applyFilter();
   },
@@ -143,7 +178,8 @@ Pages.absen = {
 
   setTab(t) {
     if (t === this.tab) return;
-    this.tab = t; LS.set('absenTab', t);
+    if (this.tab === 'N') this.saveNotulen();
+    this.tab = t; if (!this.musy) LS.set('absenTab', t);
     this.build();
     window.scrollTo(0, 0);
   },
@@ -160,6 +196,7 @@ Pages.absen = {
       if (vis) visLetters[row.dataset.l] = (visLetters[row.dataset.l] || 0) + 1;
     });
     $$('.letter', this.list).forEach((h) => {
+      if (!h.querySelector('.js-ln')) return;
       const n = visLetters[h.dataset.letter] || 0;
       h.hidden = !n;
       h.querySelector('.js-ln').textContent = n + ' nama';
@@ -182,14 +219,20 @@ Pages.absen = {
       if (p.jk === 'P') { nP++; if (on) P++; } else { nL++; if (on) L++; }
     });
     const el = this.el;
-    $('.js-cL', el).textContent = L + '/' + nL;
-    $('.js-cP', el).textContent = P + '/' + nP;
-    const tabOn = this.tab === 'P' ? P : L, tabN = this.tab === 'P' ? nP : nL;
+    if (this.musy) {
+      $('.js-cH', el).textContent = (L + P) + '/' + (nL + nP);
+      const nb = $('.js-cN', el), has = !!(kg.notulen || '').trim();
+      nb.textContent = has ? '✓' : '—'; nb.classList.toggle('ok', has);
+    } else {
+      $('.js-cL', el).textContent = L + '/' + nL;
+      $('.js-cP', el).textContent = P + '/' + nP;
+    }
+    const tabOn = this.musy ? L + P : this.tab === 'P' ? P : L, tabN = this.musy ? nL + nP : this.tab === 'P' ? nP : nL;
     const f = [['all', 'Semua', tabN], ['no', 'Belum hadir', tabN - tabOn], ['yes', 'Sudah hadir', tabOn]];
     $('.js-filters', el).innerHTML = f.map((x) => '<button class="chip ' + (this.filter === x[0] ? 'on' : '') + '" data-f="' + x[0] + '">' + x[1] + ' <span class="count">' + x[2] + '</span></button>').join('');
     const jml = kg.status === 'SELESAI' && kg.jml > 0 ? kg.jml : this.people.length;
     const c = $('.js-counter', el);
-    c.innerHTML = '<span><span class="dot"></span><b>Hadir</b> <span class="lp">L ' + L + ' · P ' + P + '</span></span>' +
+    c.innerHTML = '<span><span class="dot"></span><b>Hadir</b> <span class="lp">' + (this.musy ? 'anggota musyawaroh' : 'L ' + L + ' · P ' + P) + '</span></span>' +
       '<span class="tot">Total <b class="num">' + (L + P) + '/' + jml + '</b> <span class="lp">(' + Fmt.pct(L + P, jml) + ')</span></span>';
     if (bump) { c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); }
   },
@@ -199,7 +242,11 @@ Pages.absen = {
     const kg = S.kegiatan.get(this.kid);
     if (!kg) { Toast.show('Kegiatan ini telah dihapus.', 'warn'); App.replace('#/presensi'); return; }
     this.renderHead(kg);
-    const sig = Store.absenList(kg).map((p) => p.id + p.nama).join('|');
+    const ta = $('.js-nta', this.el);
+    if (this.musy && !this.nDirty && document.activeElement !== ta && ta.value !== (kg.notulen || '')) {
+      ta.value = kg.notulen || ''; this.notulenStat('Diperbarui dari ' + Store.nameOf(kg.nby));
+    }
+    const sig = Store.absenList(kg).map((p) => p.id + p.nama + (p.dkNama || '')).join('|');
     if (sig !== this.sig) { const y = window.scrollY; this.build(); window.scrollTo(0, y); return; }
     const mp = S.presensi.get(this.kid);
     this.rows.forEach((row, pid) => this.paintRow(row, mp && mp.get(pid)));
@@ -213,6 +260,7 @@ Pages.absen = {
   },
 
   async finish() {
+    this.saveNotulen();
     const kg = S.kegiatan.get(this.kid);
     if (!kg) return;
     if (kg.status === 'SELESAI') { App.replace('#/detail/' + kg.id); return; }
@@ -233,6 +281,7 @@ Pages.absen = {
       title: kg.judul,
       items: [
         { icon: 'message-square', label: 'Detail & laporan', onClick: () => (location.hash = '#/detail/' + kg.id) },
+        ...(this.musy && Store.isUtama() ? [{ icon: 'users-round', label: 'Atur dapukan & anggota', onClick: () => (location.hash = '#/dapukan') }] : []),
         { icon: 'pencil', label: 'Ubah info kegiatan', onClick: () => (location.hash = '#/kegiatan/ubah/' + kg.id) },
         { icon: 'refresh-cw', label: 'Sinkronkan sekarang', onClick: () => Sync.run() }
       ]

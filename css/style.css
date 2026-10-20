@@ -663,3 +663,60 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width
   background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 10px 12px; box-shadow: var(--shadow-raised);
 }
 .sel-bar .btn-text { flex: 1; text-align: center; }
+
+/* ---------- v1.2 · Musyawaroh, dapukan, notulen ---------- */
+.pill.musy { background: var(--gold-bg); color: var(--gold); border: 1px solid var(--gold-border); }
+.seg .count { font-size: 12px; font-weight: 700; opacity: .75; }
+.tab .badge.ok { background: var(--ok-bg); color: var(--ok-fg); }
+.notulen-pane { padding: 16px var(--gutter); background: var(--surface); min-height: 55dvh; }
+.notulen-pane .label { display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
+.notulen-pane .label .ic { color: var(--primary); }
+.notulen-ta { min-height: 46dvh !important; font-size: 16px; line-height: 1.6; resize: none; }
+.notulen-view { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; line-height: 1.6; font-size: 15px; white-space: normal; overflow-wrap: anywhere; }
+.card-head h3 .ic { color: var(--primary); vertical-align: -3px; }
+.dk-group { padding: 10px 0; border-top: 1px solid var(--border); }
+.dk-group:first-of-type { border-top: 0; }
+.dk-name { font-size: 12.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
+.dk-name span { font-weight: 600; letter-spacing: 0; color: var(--primary); margin-left: 4px; }
+.dk-names { display: flex; flex-wrap: wrap; gap: 6px; }
+.dk-names span { background: var(--primary-tint); border: 1px solid var(--primary-soft); color: var(--text); border-radius: var(--radius-pill); padding: 4px 11px; font-size: 14px; font-weight: 500; }
+details.dk-absent { margin-top: 8px; border-top: 1px dashed var(--border-strong); padding-top: 8px; }
+details.dk-absent summary { cursor: pointer; font-weight: 600; font-size: 14px; color: var(--text-muted); padding: 4px 0; }
+details.dk-absent .dk-names span { background: var(--surface-2); border-color: var(--border); color: var(--text-2); }
+.nt-line { display: flex; gap: 6px; align-items: center; margin-top: 10px; font-size: 13.5px; color: var(--text-2); }
+.nt-line .ic { color: var(--gold); flex: none; }
+.musy-sum { display: flex; align-items: center; gap: 12px; }
+.musy-sum .stat-ic { background: var(--gold-bg); color: var(--gold); }
+.dk-card { margin-bottom: 12px; }
+.dk-card h3 { font-size: 16.5px; }
+.dk-no { width: 26px; height: 26px; border-radius: 8px; background: var(--primary-soft); color: var(--primary); display: grid; place-items: center; font-size: 13px; font-weight: 800; flex: none; }
+.dk-member { padding: 8px 0; min-height: 0; }
+.dk-member .icon-btn { width: 34px; height: 34px; color: var(--text-muted); }
+.dk-addm { margin-top: 8px; border-style: dashed; }
+.pick-list { margin: 0 calc(-1 * var(--gutter)); border-top: 1px solid var(--border); max-height: 46dvh; overflow-y: auto; }
+.pick-list .att-row { min-height: 54px; content-visibility: visible; }
+.person-card .dk-tag { display: inline-flex; align-items: center; gap: 4px; }
+
+/* ---------- v1.2 · Warna aplikasi ---------- */
+.swatch-dot { width: 22px; height: 22px; border-radius: 50%; flex: none; box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px var(--border-strong); }
+.swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px 6px; margin-bottom: 14px; }
+.sw { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text-2); }
+.sw i { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; color: #fff; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08); transition: transform .12s; }
+.sw.on i { box-shadow: 0 0 0 3px var(--surface), 0 0 0 5.5px currentColor; }
+.sw.on { color: var(--text); }
+.sw:active i { transform: scale(.92); }
+.custom-color { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1.5px dashed var(--border-strong); border-radius: 14px; cursor: pointer; position: relative; }
+.custom-color b { display: block; font-size: 15px; }
+.custom-color small { color: var(--text-muted); font-size: 13px; }
+.custom-color input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+.cc-prev { width: 38px; height: 38px; border-radius: 12px; flex: none; background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red); }
+.tema-preview { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 14px; padding: 12px; border-radius: 14px; background: var(--bg); border: 1px solid var(--border); }
+
+/* ---------- v1.2 · Pasang aplikasi & Kode Kelompok ---------- */
+.login-install { position: absolute; top: calc(14px + var(--safe-t)); right: 14px; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px;
+  border-radius: var(--radius-pill); background: var(--surface); border: 1px solid var(--border); color: var(--primary); font-weight: 700; font-size: 13.5px; box-shadow: var(--shadow-card); }
+.login .tg-line { margin-top: 8px; padding: 4px 12px; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--surface) 70%, transparent); border: 1px solid var(--border); font-family: var(--font-sans); color: var(--text-muted); }
+.login .tg-line b { color: var(--text); }
+.login .tg-line .tg-link { color: var(--primary); font-family: var(--font-sans); }
+.login .tg-line + .pin-label { margin-top: 24px; }
+.pwa-bar { bottom: calc(var(--bottomnav-h) + var(--safe-b) + 40px) !important; }

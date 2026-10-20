@@ -25,6 +25,7 @@ Pages.detail = {
       else if (a === 'rm') { e.stopPropagation(); this.removePhoto(+t.dataset.slot); }
       else if (a === 'view') this.viewPhoto(+t.dataset.slot);
       else if (a === 'more') this.more();
+      else if (a === 'notulen') location.hash = '#/absen/' + this.kid + '/notulen';
     });
     const onFile = (input) => input.addEventListener('change', () => { const f = input.files[0]; input.value = ''; if (f) this.savePhoto(f); });
     onFile($('.js-cam', el)); onFile($('.js-gal', el));
@@ -47,7 +48,9 @@ Pages.detail = {
       $('.action-bar', el).hidden = true; return;
     }
     $('.action-bar', el).hidden = false;
-    $('.js-head', el).innerHTML = UI.focusHead({ title: 'Detail Kegiatan', sub: 'Sambung ' + kg.tingkat, right: '<button class="icon-btn plain" data-act="more" aria-label="Menu lainnya">' + ic('ellipsis-vertical', 22) + '</button>' });
+    const musy = isMusy(kg);
+    $('.js-edit', el).innerHTML = ic('pencil', 20) + (musy ? 'Edit Presensi &amp; Notulen' : 'Edit Presensi');
+    $('.js-head', el).innerHTML = UI.focusHead({ title: musy ? 'Detail Musyawaroh' : 'Detail Kegiatan', sub: UI.jenisLabel(kg), right: '<button class="icon-btn plain" data-act="more" aria-label="Menu lainnya">' + ic('ellipsis-vertical', 22) + '</button>' });
     const st = Store.stats(kg.id);
     const pct = st.pct, R = 25, C = 2 * Math.PI * R;
     const sub = (n, d) => d ? 'dari ' + d + ' terdaftar (' + Fmt.pct(n, d) + ')' : '';
@@ -56,7 +59,7 @@ Pages.detail = {
     const busyPdf = this.busy.pdf;
 
     $('.js-body', el).innerHTML =
-      '<div class="card"><div class="pill-row">' + UI.lvl(kg.tingkat) + UI.status(kg) + '</div>' +
+      '<div class="card"><div class="pill-row">' + UI.lvl(kg.tingkat, kg.jenis) + UI.status(kg) + '</div>' +
         '<h2 class="detail-title">' + esc(kg.judul) + '</h2>' +
         '<div class="kv">' + ic('calendar', 19) + esc(Fmt.long(kg.tanggal)) + '</div>' +
         (kg.jam ? '<div class="kv">' + ic('clock', 19) + esc(kg.jam) + ' WITA</div>' : '') +
@@ -65,27 +68,45 @@ Pages.detail = {
       '</div>' +
       '<div class="section-label">Ringkasan Kehadiran</div>' +
       '<div class="stat-grid">' +
-        '<div class="card stat"><div class="stat-label">Total Hadir</div><div class="stat-value">' + st.total + '</div><div class="stat-foot">dari ' + st.jml + ' peserta</div></div>' +
+        '<div class="card stat"><div class="stat-label">Total Hadir</div><div class="stat-value">' + st.total + '</div><div class="stat-foot">dari ' + st.jml + (musy ? ' anggota' : ' peserta') + '</div></div>' +
         '<div class="card stat" style="display:flex;align-items:center;justify-content:space-between;gap:6px"><div><div class="stat-label">Persentase</div><div class="stat-value" style="color:var(--primary)">' + Fmt.pct(st.total, st.jml) + '</div>' +
           '<div class="stat-foot ' + (pct >= 75 ? 'ok' : pct >= 50 ? '' : 'err') + '">' + (pct >= 75 ? 'Kehadiran tinggi' : pct >= 50 ? 'Kehadiran sedang' : 'Kehadiran rendah') + '</div></div>' +
           '<svg class="ring" viewBox="0 0 60 60"><circle class="bg" cx="30" cy="30" r="' + R + '"/><circle class="fg" cx="30" cy="30" r="' + R + '" stroke-dasharray="' + C.toFixed(2) + '" stroke-dashoffset="' + (C * (1 - Math.min(100, pct) / 100)).toFixed(2) + '"/></svg></div>' +
+        (musy ? '' :
         '<div class="card stat"><div class="stat-top" style="margin-bottom:4px"><span class="stat-label">Laki-laki</span><span class="dot" style="width:9px;height:9px;border-radius:50%;background:var(--chart-male)"></span></div><div class="stat-value">' + st.L + '</div><div class="stat-foot">' + sub(st.L, st.regL) + '</div></div>' +
-        '<div class="card stat"><div class="stat-top" style="margin-bottom:4px"><span class="stat-label">Perempuan</span><span class="dot" style="width:9px;height:9px;border-radius:50%;background:var(--chart-female)"></span></div><div class="stat-value">' + st.P + '</div><div class="stat-foot">' + sub(st.P, st.regP) + '</div></div>' +
+        '<div class="card stat"><div class="stat-top" style="margin-bottom:4px"><span class="stat-label">Perempuan</span><span class="dot" style="width:9px;height:9px;border-radius:50%;background:var(--chart-female)"></span></div><div class="stat-value">' + st.P + '</div><div class="stat-foot">' + sub(st.P, st.regP) + '</div></div>') +
       '</div>' +
+      (musy ? this.musyCards(kg) : '') +
       '<div class="card" style="margin-top:12px"><div class="card-head"><div><h3>Foto Kegiatan <span class="muted" style="font-weight:500">(maks. 2)</span></h3><div class="sub">Otomatis dikompres ≤ 500 KB</div></div><span class="pill js-fcount"></span></div>' +
         '<div class="photos js-photos"></div></div>' +
       '<div class="card" style="margin-top:12px"><div class="card-head" style="margin-bottom:12px"><h3>Laporan WhatsApp</h3><span class="sub">Template aktif</span></div>' +
         '<div class="wa-bubble">' + Report.toHtml(text) + '</div>' +
         '<div class="btn-row" style="margin-top:12px"><button class="btn btn-primary" data-act="copy">' + ic('copy', 18) + 'Salin Laporan</button>' +
         '<button class="btn btn-secondary" data-act="share">' + ic('share-2', 18) + 'Bagikan ke WA</button></div></div>' +
-      '<div class="card" style="margin-top:12px"><div class="card-head" style="margin-bottom:12px"><h3>Laporan PDF</h3><span class="sub">Daftar hadir L / P</span></div>' +
-        (pdfOld ? '<div class="banner warn" style="margin-bottom:12px">' + ic('triangle-alert', 20) + '<div><b>PDF perlu diperbarui</b> — presensi diubah setelah PDF dibuat.</div></div>' : '') +
+      '<div class="card" style="margin-top:12px"><div class="card-head" style="margin-bottom:12px"><h3>Laporan PDF</h3><span class="sub">' + (musy ? 'Notulen + daftar hadir' : 'Daftar hadir L / P') + '</span></div>' +
+        (pdfOld ? '<div class="banner warn" style="margin-bottom:12px">' + ic('triangle-alert', 20) + '<div><b>PDF perlu diperbarui</b> — ' + (musy ? 'presensi atau notulen' : 'presensi') + ' diubah setelah PDF dibuat.</div></div>' : '') +
         '<div class="btn-row"><button class="btn ' + (kg.pdf && !pdfOld ? 'btn-secondary' : 'btn-primary') + '" data-act="pdf"' + (busyPdf ? ' disabled' : '') + '>' +
           (busyPdf ? ic('refresh-cw', 18, 'spin') + 'Membuat PDF…' : ic(kg.pdf ? 'refresh-cw' : 'file-text', 18) + (kg.pdf ? 'Perbarui PDF' : 'Buat PDF')) + '</button>' +
           (kg.pdf ? '<button class="btn ' + (pdfOld ? 'btn-secondary' : 'btn-primary') + '" data-act="dl"' + (this.busy.dl ? ' disabled' : '') + '>' + (this.busy.dl ? ic('refresh-cw', 18, 'spin') : ic('download', 18)) + 'Unduh PDF</button>' : '') + '</div>' +
         '<p class="help" style="display:flex;align-items:center;gap:6px;margin-top:10px">' + ic('hard-drive', 15) +
           (kg.pdf ? 'Tersimpan di Google Drive' + (kg.pdfAt ? ' · ' + esc(Fmt.dMon(kg.pdfAt.slice(0, 10)) + ', ' + kg.pdfAt.slice(11, 16)) : '') : 'PDF disimpan ke Google Drive dan bisa diunduh kapan saja.') + '</p></div>';
     this.renderPhotos();
+  },
+
+  /** Musyawaroh: daftar hadir per dapukan + notulen. */
+  musyCards(kg) {
+    const h = Store.musyGroups(kg.id, true), a = Store.musyGroups(kg.id, false);
+    const nA = a.reduce((x, g) => x + g.list.length, 0);
+    const grp = (gs) => gs.map((g) => '<div class="dk-group"><div class="dk-name">' + esc(g.nama) + ' <span>' + g.list.length + '</span></div><div class="dk-names">' + g.list.map((n) => '<span>' + esc(n) + '</span>').join('') + '</div></div>').join('');
+    const note = (kg.notulen || '').trim();
+    return '<div class="card" style="margin-top:12px"><div class="card-head" style="margin-bottom:8px"><div><h3>' + ic('notebook-pen', 18) + ' Notulen Musyawaroh</h3>' +
+        (note && kg.nby ? '<div class="sub">Terakhir diubah ' + esc(Store.nameOf(kg.nby)) + (kg.nt ? ' · ' + esc(Fmt.ago(kg.nt)) : '') + '</div>' : '') + '</div></div>' +
+        (note ? '<div class="notulen-view">' + Report.toHtml(note) + '</div>'
+              : '<div class="empty" style="padding:14px 6px 6px"><p>Notulen belum ditulis.</p></div>') +
+        '<button class="btn btn-secondary btn-block" style="margin-top:12px" data-act="notulen">' + ic('pencil', 18) + (note ? 'Ubah Notulen' : 'Tulis Notulen') + '</button></div>' +
+      '<div class="card" style="margin-top:12px"><div class="card-head" style="margin-bottom:6px"><h3>Daftar Hadir</h3><span class="pill ok">' + h.reduce((x, g) => x + g.list.length, 0) + ' hadir</span></div>' +
+        (h.length ? grp(h) : '<p class="help">Belum ada yang dicentang hadir.</p>') +
+        (nA ? '<details class="dk-absent"><summary>Tidak hadir (' + nA + ')</summary>' + grp(a) + '</details>' : '') + '</div>';
   },
 
   /* ---------- Foto ---------- */

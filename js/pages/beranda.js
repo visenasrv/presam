@@ -55,7 +55,7 @@ Pages.beranda = {
     }
     this.el = el;
     const f = this.f, today = Fmt.ymd();
-    const all = Store.kegiatanAll();
+    const all = Store.kegiatanSambung();                       // dashboard = kegiatan sambung; musyawaroh diringkas terpisah
     const kegs = all.filter((k) => !f.tingkat || k.tingkat === f.tingkat);
     const ps = Store.pesertaAktif();
     const nL = ps.filter((p) => p.jk === 'L').length, nP = ps.length - nL;
@@ -117,6 +117,7 @@ Pages.beranda = {
           (lastSt ? '<div class="stat-value">' + lastSt.total + '<small>/' + lastSt.jml + '</small></div><div class="stat-foot ok">' + Fmt.pct(lastSt.total, lastSt.jml) + ' hadir</div>'
                   : '<div class="stat-value">—</div><div class="stat-foot">Belum ada kegiatan</div>') + '</div>' +
       '</div>' +
+      this.musyCard(R, mSet, f, today, counted) +
       '<div class="card chart-card" style="margin-top:12px"><div><h3 class="h2" style="font-size:16.5px">Hadir per Kegiatan</h3><div class="page-sub" style="font-size:13px;margin-top:2px">10 kegiatan terakhir · ' + esc(R.label.toLowerCase()) + '</div>' +
         '<div class="chart-legend"><span><i style="background:var(--chart-male)"></i>Laki-laki</span><span><i style="background:var(--chart-female)"></i>Perempuan</span></div></div>' +
         '<div class="chart" id="chBars"></div></div>' +
@@ -132,10 +133,22 @@ Pages.beranda = {
     Charts.line($('#chLine', el), months);
   },
 
+  musyCard(R, mSet, f, today, counted) {
+    const ms = Store.kegiatanMusy().filter((k) => !f.tingkat || k.tingkat === f.tingkat);
+    if (!ms.length) return '';
+    const inP = ms.filter((k) => mSet.has(k.tanggal.slice(0, 7)));
+    const avg = mean(counted(inP).map((k) => Store.stats(k.id).pct));
+    const last = ms.find((k) => k.tanggal <= today) || ms[0];
+    return '<a class="card musy-sum tap" href="#/' + (last.status === 'SELESAI' ? 'detail/' : 'absen/') + esc(last.id) + '" style="margin-top:12px;color:inherit">' +
+      '<span class="stat-ic">' + ic('messages-square', 20) + '</span><div class="row-main"><div class="row-title">Musyawaroh · ' + esc(R.label) + '</div>' +
+      '<div class="row-sub">' + inP.length + ' kali' + (avg === null ? '' : ' · rata-rata hadir ' + Math.round(avg) + '%') + ' · terakhir ' + esc(Fmt.short(last.tanggal)) + (last.notulen ? ' · notulen ✓' : '') + '</div></div>' +
+      ic('chevron-right', 18, 'muted') + '</a>';
+  },
+
   monthPicker() {
     const sel = new Set(this.f.period === 'pilih' ? this.f.months : []);
     const counts = {};
-    Store.kegiatanAll().forEach((k) => { const m = k.tanggal.slice(0, 7); counts[m] = (counts[m] || 0) + 1; });
+    Store.kegiatanSambung().forEach((k) => { const m = k.tanggal.slice(0, 7); counts[m] = (counts[m] || 0) + 1; });
     let year = sel.size ? +[...sel].sort().pop().slice(0, 4) : new Date().getFullYear();
     const cur = ymOf(new Date());
     Sheet.open({

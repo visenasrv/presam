@@ -10,7 +10,20 @@ const Pages = {};
 
 /* ---------- Komponen tampilan bersama ---------- */
 const UI = {
-  lvl(t) { return '<span class="pill lvl-' + esc(t) + '">Sambung ' + esc(t) + '</span>'; },
+  lvl(t, jenis) {
+    if (jenis === MUSY) return '<span class="pill musy">' + ic('messages-square', 14) + 'Musyawaroh ' + esc(t) + '</span>';
+    return '<span class="pill lvl-' + esc(t) + '">Sambung ' + esc(t) + '</span>';
+  },
+  jenisLabel(kg) { return (isMusy(kg) ? 'Musyawaroh ' : 'Sambung ') + kg.tingkat; },
+  /** Tombol "Pasang aplikasi" — tampil hanya bila HP/browser bisa memasang (lihat pwa.js). */
+  installBtn(cls) { return '<button type="button" class="' + (cls || 'btn btn-ghost btn-block') + '" data-pwa-install hidden>' + ic('smartphone', 18) + 'Pasang aplikasi di HP</button>'; },
+  bindInstall(root) {
+    if (!window.PWA) return;
+    $$('[data-pwa-install]', root).forEach((b) => {
+      b.hidden = !PWA.canInstall || PWA.isInstalled;
+      if (!b._pwa) { b._pwa = true; b.addEventListener('click', (e) => { e.preventDefault(); PWA.install(); }); }
+    });
+  },
   status(kg) {
     const pend = Store.pendingKegiatan().has(kg.id);
     const stuck = pend && (navigator.onLine === false || Sync.state === 'error' || Sync.state === 'offline');
@@ -38,13 +51,13 @@ const UI = {
 
 /* ---------- Tema ---------- */
 const Theme = {
-  get() { return LS.get('theme', 'system'); },
+  get() { return LS.getG('theme', 'system'); },
   isDark() {
     const t = this.get();
     return t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
   },
   set(t) {
-    LS.set('theme', t);
+    LS.setG('theme', t);
     if (t === 'system') document.documentElement.removeAttribute('data-theme');
     else document.documentElement.setAttribute('data-theme', t);
     this.meta();
@@ -59,12 +72,91 @@ const Theme = {
 };
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (Theme.get() === 'system') { Theme.meta(); Bus.emit('theme'); } });
 
+/* ---------- Warna aplikasi (diatur Penerobos Utama, berlaku untuk semua HP) ---------- */
+const Tema = {
+  DEFAULT: '#15803D',
+  PRESETS: [['Hijau', '#15803D'], ['Tosca', '#0F766E'], ['Biru', '#1D4ED8'], ['Biru Tua', '#1E3A8A'], ['Ungu', '#6D28D9'],
+            ['Marun', '#9F1239'], ['Merah', '#B91C1C'], ['Oranye', '#C2410C'], ['Cokelat', '#8B4513'], ['Abu Gelap', '#334155']],
+  cur: null,
+  valid(h) { return /^#[0-9A-Fa-f]{6}$/.test(String(h || '')); },
+  hsl(hex) {
+    const n = parseInt(hex.slice(1), 16), r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
+    let h = 0, s = 0;
+    if (mx !== mn) {
+      const d = mx - mn;
+      s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn);
+      h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+      h *= 60;
+    }
+    return [Math.round(h), Math.round(s * 100), Math.round(l * 100)];
+  },
+  hex(h, s, l) {
+    s = Math.max(0, Math.min(100, s)) / 100; l = Math.max(0, Math.min(100, l)) / 100;
+    const k = (n) => (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
+    const f = (n) => Math.round(255 * (l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1))))).toString(16).padStart(2, '0');
+    return ('#' + f(0) + f(8) + f(4)).toUpperCase();
+  },
+  lum(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    const c = [n >> 16 & 255, n >> 8 & 255, n & 255].map((v) => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); });
+    return .2126 * c[0] + .7152 * c[1] + .0722 * c[2];
+  },
+  contrast(a, b) { const x = this.lum(a), y = this.lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); },
+  /** Satu warna dasar → seluruh token warna mode terang & gelap. */
+  css(base) {
+    let [h, s, l] = this.hsl(base);
+    const l0 = l;
+    if (this.contrast(base, '#FFFFFF') < 4.5) while (l > 18 && this.contrast(this.hex(h, s, l), '#FFFFFF') < 4.5) l -= 2;   // teks putih tetap terbaca
+    const P = l === l0 ? base.toUpperCase() : this.hex(h, s, l), gray = s < 25;
+    const sd = gray ? Math.max(s, 12) : Math.min(80, Math.max(s, 55));
+    let ld = 55;
+    while (ld < 75 && this.contrast(this.hex(h, sd, ld), '#0B1210') < 6) ld += 2;
+    const D = this.hex(h, sd, ld), st = gray ? s : Math.min(s, 70);
+    const light = {
+      '--primary': P, '--primary-hover': this.hex(h, s, Math.max(10, l - 7)), '--primary-soft': this.hex(h, st, 92), '--primary-tint': this.hex(h, st, 97),
+      '--on-primary': '#FFFFFF', '--bg': this.hex(h, gray ? 10 : 14, 97),
+      '--lvl-kelompok-bg': this.hex(h, st, 92), '--lvl-kelompok-fg': this.hex(h, s, Math.min(l, 26)),
+      '--chart-male': P, '--chart-female': this.hex(h, st, 76), '--chart-line': P
+    };
+    const dark = {
+      '--primary': D, '--primary-hover': this.hex(h, sd, ld - 8), '--primary-soft': this.hex(h, Math.round(sd * .6), 20), '--primary-tint': this.hex(h, gray ? 10 : 40, 10),
+      '--on-primary': this.hex(h, sd, 10), '--bg': this.hex(h, gray ? 12 : 25, 6), '--surface': this.hex(h, gray ? 10 : 17, 9),
+      '--surface-2': this.hex(h, gray ? 10 : 16, 13), '--surface-3': this.hex(h, gray ? 10 : 16, 16), '--border': this.hex(h, gray ? 10 : 15, 17),
+      '--border-strong': this.hex(h, gray ? 10 : 14, 23), '--text': this.hex(h, gray ? 8 : 15, 92), '--text-2': this.hex(h, gray ? 8 : 12, 80),
+      '--text-muted': this.hex(h, gray ? 6 : 8, 61), '--lvl-kelompok-bg': this.hex(h, Math.round(sd * .6), 20), '--lvl-kelompok-fg': this.hex(h, sd, 75),
+      '--chart-male': D, '--chart-female': this.hex(h, Math.round(sd * .7), 30), '--chart-line': D
+    };
+    const decl = (o) => Object.keys(o).map((k) => k + ':' + o[k]).join(';');
+    return ':root{' + decl(light) + '}' +
+      '@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){' + decl(dark) + '}}' +
+      ':root[data-theme="dark"]{' + decl(dark) + '}';
+  },
+  /** Terapkan warna. Hijau bawaan = tanpa penimpaan (persis desain asli). */
+  apply(hex) {
+    hex = this.valid(hex) ? hex.toUpperCase() : '';
+    if (hex === this.DEFAULT) hex = '';
+    if (hex === this.cur) return;
+    this.cur = hex;
+    let el = document.getElementById('temaVars');
+    if (!hex) { if (el) el.remove(); LS.del('temaCss'); return; }
+    const css = this.css(hex);
+    if (!el) { el = document.createElement('style'); el.id = 'temaVars'; document.head.appendChild(el); }
+    el.textContent = css;
+    LS.set('temaCss', css);
+  }
+};
+
 /* ---------- Aplikasi ---------- */
 const App = {
   route: null, els: {}, stack: [], scroll: {}, shell: false, pendingRender: false,
 
   async init() {
-    registerSW();
+    // Satu situs banyak klien: belum memilih Kode Kelompok / kelompok dinonaktifkan → gerbang kode
+    if (window.Tenant && (Tenant.need || Tenant.blocked)) { TenantGate.mount(); return; }
+    if (window.TenantGate) TenantGate.watch();
+    addEventListener('pwa:installable', () => UI.bindInstall(document));
+    addEventListener('pwa:installed', () => { UI.bindInstall(document); Toast.show('Aplikasi terpasang di HP'); });
     Bus.on('auth-expired', () => this.sessionExpired());
     Bus.on('sync', () => this.renderPill());
     Bus.on('outbox', () => this.renderPill());
@@ -80,6 +172,7 @@ const App = {
   async start(loaded) {
     this.mountShell();
     if (!loaded) await Store.load();
+    Tema.apply(S.cfg.tema_warna);
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
     if (!Store.hasData()) {
       this.view.innerHTML = UI.skeleton(4);
@@ -231,6 +324,7 @@ const App = {
   },
 
   onData(x) {
+    Tema.apply(S.cfg.tema_warna);
     if (x && x.remote) this.renderBrand();
     if (this.pendingRender) return;
     this.pendingRender = true;
@@ -267,6 +361,7 @@ const App = {
           '<div class="logo-tile">' + ic('clipboard-check', 42, '', 1.9) + '</div>' +
           '<h1>Presensi Sambung</h1>' +
           '<p class="sub">' + (kel ? 'Kelompok ' + esc(kel) : 'Masuk dengan PIN Penerobos') + '</p>' +
+          (window.TenantGate ? TenantGate.loginLine() : '') +
           '<div class="pin-label">MASUKKAN PIN</div>' +
           '<div class="pin-dots" id="pinDots" aria-live="polite"></div>' +
           '<div class="pin-msg" id="pinMsg">' + (msg ? '<span class="err">' + ic('circle-alert', 18) + esc(msg) + '</span>' : '') + '</div>' +
@@ -280,7 +375,10 @@ const App = {
           '<button class="btn btn-primary btn-block btn-lg" id="btnMasuk" disabled>Masuk ' + ic('arrow-right', 20) + '</button>' +
           '<div class="login-foot">' + ic('wifi', 16) + 'Login pertama memerlukan internet</div>' +
         '</div>' +
+        UI.installBtn('login-install') +
       '</div>';
+    if (window.TenantGate) TenantGate.bindLoginLine(root, { pending: async () => (await DB.getAll('outbox')).length });
+    UI.bindInstall(root);
     let pin = '';
     const dots = $('#pinDots'), btn = $('#btnMasuk'), msgEl = $('#pinMsg');
     const draw = () => {
@@ -297,7 +395,7 @@ const App = {
     };
     const submit = async () => {
       if (pin.length < 4 || btn.dataset.busy) return;
-      if (!API.configured()) { msgEl.innerHTML = '<span class="err">' + ic('circle-alert', 18) + 'API_URL belum diisi di js/config.js</span>'; return; }
+      if (!API.configured()) { msgEl.innerHTML = '<span class="err">' + ic('circle-alert', 18) + 'Kode Kelompok belum dipilih. Muat ulang aplikasi.</span>'; return; }
       if (navigator.onLine === false) { msgEl.innerHTML = '<span class="err">' + ic('wifi-off', 18) + 'Tidak ada internet. Login pertama butuh koneksi.</span>'; return; }
       btn.dataset.busy = '1';
       btn.innerHTML = ic('refresh-cw', 20, 'spin') + 'Memeriksa…';
@@ -357,7 +455,7 @@ const App = {
       });
     });
     if (!ok) return;
-    if (wipe) { await DB.wipe(); LS.del('kelompok'); S.outbox = new Map(); S.since = 0; }
+    if (wipe) { await DB.wipe(); LS.del('kelompok'); LS.del('temaCss'); S.outbox = new Map(); S.since = 0; }
     Store.clearSession();
     history.replaceState(null, '', '#/beranda');
     this.showLogin();
@@ -369,31 +467,10 @@ const App = {
 };
 
 function deviceId() {
-  let d = LS.get('device', '');
-  if (!d) { d = uid(); LS.set('device', d); }
+  let d = LS.getG('device', '');
+  if (!d) { d = LS.get('device', '') || uid(); LS.setG('device', d); }
   return d;
 }
-
-function registerSW() {
-  if (!('serviceWorker' in navigator) || location.protocol === 'file:') return;
-  const had = !!navigator.serviceWorker.controller;
-  navigator.serviceWorker.register('sw.js').then((reg) => {
-    reg.addEventListener('updatefound', () => {
-      const w = reg.installing;
-      if (!w) return;
-      w.addEventListener('statechange', () => {
-        if (w.state === 'installed' && navigator.serviceWorker.controller) {
-          Toast.show('Versi baru tersedia', 'info', { action: 'Muat ulang', ms: 12000, onAction: () => w.postMessage('SKIP_WAITING') });
-        }
-      });
-    });
-    setInterval(() => reg.update().catch(() => {}), 60 * 60 * 1000);
-  }).catch((e) => console.warn('SW gagal:', e));
-  let reloaded = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!had || reloaded) return;
-    reloaded = true; location.reload();
-  });
-}
+/* Service worker, tombol pasang, dan banner "Versi baru tersedia" ada di pwa.js */
 
 document.addEventListener('DOMContentLoaded', () => App.init());

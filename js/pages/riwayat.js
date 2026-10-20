@@ -5,14 +5,15 @@
 
 Pages.riwayat = {
   nav: 'riwayat',
-  f: { q: '', tingkat: '', status: '', from: '', to: '', label: 'Semua' },
+  f: { q: '', jenis: '', tingkat: '', status: '', from: '', to: '', label: 'Semua' },
   limit: 30, selecting: false, sel: new Set(),
 
   mount(el) {
     el.innerHTML =
-      '<div class="page-head" style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div><h1 class="h1">Riwayat Kegiatan</h1><div class="page-sub">Arsip sambung kelompok, desa &amp; daerah</div></div>' +
+      '<div class="page-head" style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div><h1 class="h1">Riwayat Kegiatan</h1><div class="page-sub">Arsip sambung &amp; musyawaroh</div></div>' +
         '<button class="btn btn-ghost btn-sm js-pick" style="margin-top:4px" hidden>' + ic('check-check', 18) + 'Pilih</button></div>' +
-      '<div class="search input-wrap">' + ic('search', 20) + '<input class="input js-q" type="search" placeholder="Cari judul atau tempat…" autocomplete="off" aria-label="Cari kegiatan"></div>' +
+      '<div class="seg js-jenis" style="margin-bottom:12px"></div>' +
+      '<div class="search input-wrap">' + ic('search', 20) + '<input class="input js-q" type="search" placeholder="Cari judul, tempat, atau isi notulen…" autocomplete="off" aria-label="Cari kegiatan"></div>' +
       '<div class="chips js-filters" style="margin-bottom:4px"></div>' +
       '<div class="js-list"></div>' +
       '<div class="sel-bar js-selbar" hidden><button class="btn btn-ghost btn-sm" data-selcancel>Batal</button><button class="btn-text" data-selall>Pilih semua</button>' +
@@ -37,7 +38,8 @@ Pages.riwayat = {
       }
       if (e.target.closest('[data-date]')) this.dateSheet();
       else if (e.target.closest('[data-more]')) { this.limit += 40; this.renderList(); }
-      else if (e.target.closest('[data-reset]')) { this.f = { q: '', tingkat: '', status: '', from: '', to: '', label: 'Semua' }; q.value = ''; this.render(); }
+      else if (e.target.closest('[data-reset]')) { this.f = { q: '', jenis: '', tingkat: '', status: '', from: '', to: '', label: 'Semua' }; q.value = ''; this.render(); }
+      else if (e.target.closest('[data-jenis]')) { this.f.jenis = e.target.closest('[data-jenis]').dataset.jenis; this.limit = 30; this.render(); }
     });
   },
   show() { this.setSelecting(false, true); this.render(); },
@@ -87,10 +89,13 @@ Pages.riwayat = {
 
   renderFilters() {
     const f = this.f;
+    const nM = Store.kegiatanMusy().length, nA = Store.kegiatanAll().length;
+    $('.js-jenis', this.el).innerHTML = [['', 'Semua', nA], ['SAMBUNG', 'Sambung', nA - nM], ['MUSYAWAROH', 'Musyawaroh', nM]]
+      .map((x) => '<button type="button" data-jenis="' + x[0] + '" class="' + (f.jenis === x[0] ? 'on' : '') + '">' + x[1] + ' <span class="count">' + x[2] + '</span></button>').join('');
     const sel = (name, label, opts) => '<label class="chip select ' + (f[name] ? 'on' : '') + '">' + esc(label) + ic('chevron-down', 16) +
       '<select data-f="' + name + '">' + opts.map((o) => '<option value="' + o[0] + '"' + (f[name] === o[0] ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select></label>';
     $('.js-filters', this.el).innerHTML =
-      sel('tingkat', 'Tingkat: ' + (f.tingkat || 'Semua'), [['', 'Semua tingkat'], ['Kelompok', 'Sambung Kelompok'], ['Desa', 'Sambung Desa'], ['Daerah', 'Sambung Daerah']]) +
+      sel('tingkat', 'Tingkat: ' + (f.tingkat || 'Semua'), [['', 'Semua tingkat'], ['Kelompok', 'Kelompok'], ['Desa', 'Desa'], ['Daerah', 'Daerah']]) +
       '<button class="chip ' + (f.from || f.to ? 'on' : '') + '" data-date>' + ic('calendar-range', 16) + 'Tanggal: ' + esc(f.label) + ic('chevron-down', 16) + '</button>' +
       sel('status', 'Status: ' + ({ '': 'Semua', DRAFT: 'Draft', SELESAI: 'Selesai', PENDING: 'Belum terkirim' })[f.status], [['', 'Semua status'], ['DRAFT', 'Draft'], ['SELESAI', 'Selesai'], ['PENDING', 'Belum terkirim']]);
   },
@@ -98,10 +103,11 @@ Pages.riwayat = {
   filtered() {
     const f = this.f, pend = Store.pendingKegiatan();
     return Store.kegiatanAll().filter((k) =>
+      (!f.jenis || (f.jenis === 'MUSYAWAROH') === isMusy(k)) &&
       (!f.tingkat || k.tingkat === f.tingkat) &&
       (!f.status || (f.status === 'PENDING' ? pend.has(k.id) : k.status === f.status)) &&
       (!f.from || k.tanggal >= f.from) && (!f.to || k.tanggal <= f.to) &&
-      (!f.q || norm(k.judul + ' ' + k.tempat).indexOf(f.q) > -1));
+      (!f.q || norm(k.judul + ' ' + k.tempat + ' ' + (k.notulen || '')).indexOf(f.q) > -1));
   },
 
   renderList() {
@@ -136,11 +142,12 @@ Pages.riwayat = {
     const on = this.sel.has(k.id), utama = Store.isUtama();
     return '<div class="card tap rw-card' + (this.selecting ? ' selecting' : '') + (on ? ' picked' : '') + '" role="' + (this.selecting ? 'checkbox' : 'link') + '"' + (this.selecting ? ' aria-checked="' + on + '"' : '') +
       ' data-kid="' + esc(k.id) + '" data-href="' + esc(this.href(k)) + '" tabindex="0">' +
-      '<div class="pill-row between">' + (this.selecting ? '<span class="chk">' + ic('check', 16, '', 3) + '</span>' : '') + UI.lvl(k.tingkat) + '<span style="flex:1"></span>' + UI.status(k) +
+      '<div class="pill-row between">' + (this.selecting ? '<span class="chk">' + ic('check', 16, '', 3) + '</span>' : '') + UI.lvl(k.tingkat, k.jenis) + '<span style="flex:1"></span>' + UI.status(k) +
         (utama && !this.selecting ? '<button class="icon-btn plain rw-menu" data-kmenu="' + esc(k.id) + '" aria-label="Aksi riwayat">' + ic('ellipsis-vertical', 20) + '</button>' : '') + '</div>' +
       '<div class="card-title">' + esc(k.judul) + '</div>' +
       '<div class="meta-row">' + ic('clock', 15) + '<span class="ellipsis">' + esc([Fmt.short(k.tanggal), k.jam, k.tempat].filter(Boolean).join(' · ')) + '</span></div>' +
       '<div class="att-box"><div class="row1"><span class="num">Hadir ' + st.total + '/' + st.jml + '</span><span class="pct num">' + Fmt.pct(st.total, st.jml) + '</span></div>' + UI.progress(st.pct) + '</div>' +
+      (isMusy(k) ? '<div class="nt-line">' + ic('notebook-pen', 15) + '<span class="ellipsis">' + (k.notulen ? esc(k.notulen.replace(/[*_~]/g, '').replace(/\s+/g, ' ').slice(0, 90)) : '<i>Notulen belum diisi</i>') + '</span></div>' : '') +
       '<div class="link-row">' + pdf + '<span class="btn-text" style="padding:0">' + (k.status === 'SELESAI' ? 'Buka Detail' : 'Lanjutkan') + ' →</span></div>' +
     '</div>';
   },

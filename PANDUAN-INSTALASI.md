@@ -1,165 +1,145 @@
-# Panduan Instalasi — Presensi Sambung
+# Panduan Instalasi — Presensi Sambung v1.2
 
-Aplikasi terdiri dari dua bagian:
+Mulai versi 1.2, **satu situs dipakai banyak kelompok**. Situsnya (frontend) cukup dipasang sekali di GitHub Pages. Setiap kelompok punya **server sendiri** (Apps Script + Google Sheet di akun Google kelompok itu) dan masuk dengan **Kode Kelompok**.
 
-| Bagian | Isi | Dipasang di |
-|---|---|---|
-| **Backend** | `Kode.gs`, `Data.gs`, `Media.gs`, `Setup.gs`, `appsscript.json` | Google Apps Script (database di Google Sheets, foto & PDF di Google Drive) |
-| **Frontend** | Folder `presensi-sambung` (berisi `index.html`, `css/`, `js/`, dst.) | GitHub Pages, lalu dipasang ke layar utama HP |
+| Bagian | Isi | Dipasang | Berapa kali |
+|---|---|---|---|
+| **Backend** | `Kode.gs`, `Data.gs`, `Media.gs`, `Setup.gs`, `appsscript.json` | Google Apps Script di akun Google **tiap kelompok** | Sekali per kelompok |
+| **Frontend** | Isi `presensi-sambung.zip` (`index.html`, `kelola.html`, `klien.json`, `css/`, `js/`, …) | GitHub Pages | Sekali untuk semua |
+| **Daftar kode** | `klien.json` | Diubah lewat `kelola.html` | Setiap ada kelompok baru |
 
-Urutannya: **Backend dulu → salin URL → isi `js/config.js` → Frontend ke GitHub Pages.**
-
----
-
-## Bagian A — Backend (Google Apps Script)
-
-### A1. Buat proyek
-1. Buka **https://script.google.com** dengan akun Google yang akan menyimpan database.
-2. Klik **Proyek baru**, ganti namanya menjadi **Presensi Sambung**.
-
-### A2. Tempel berkas
-1. Berkas `Code.gs` bawaan → ganti nama menjadi **`Kode`**, hapus isinya, tempel isi **`Kode.gs`**.
-2. Klik **＋ → Skrip**, beri nama **`Data`**, tempel isi **`Data.gs`**.
-3. Ulangi untuk **`Media`** (isi `Media.gs`) dan **`Setup`** (isi `Setup.gs`).
-4. Klik ⚙️ **Setelan proyek** → centang **"Tampilkan file manifes appsscript.json di editor"**.
-   Kembali ke Editor, buka `appsscript.json`, ganti seluruh isinya dengan isi **`appsscript.json`**.
-5. Klik 💾 **Simpan**.
-
-### A3. Sesuaikan data awal
-Buka berkas **`Setup`**, ubah bagian paling atas:
-
-```javascript
-const SETUP = {
-  NAMA_KELOMPOK: 'Sangatta Selatan 2',
-  NAMA_PENEROBOS_UTAMA: 'Adry',
-  PIN_AWAL_UTAMA: '123456',
-  PIN_RESET_UTAMA: '654321'
-};
-```
-
-### A4. Jalankan `setupAwal` — **SEKALI SAJA**
-1. Pilih fungsi **`setupAwal`** di menu tarik-turun, klik ▶ **Jalankan**.
-2. Muncul **"Perlu otorisasi"** → **Tinjau izin** → pilih akun → **Lanjutan** → **Buka Presensi Sambung (tidak aman)** → **Izinkan**.
-   (Peringatan ini normal untuk skrip buatan sendiri.)
-3. Buka **Log eksekusi**. Harus muncul **✅ Setup selesai!** beserta tautan database & folder Drive.
-4. Cek Google Drive: ada folder **Presensi Sambung** berisi spreadsheet **DB Presensi Sambung**, folder **Foto Kegiatan**, dan **Laporan PDF**.
-
-> ⚠️ Jangan menjalankan `setupAwal` lagi. Bila tidak sengaja dijalankan, skrip akan menolak dan tidak membuat duplikat.
-
-### A5. Deploy sebagai aplikasi web
-1. Klik **Deploy → Deployment baru** → ⚙️ pilih jenis **Aplikasi web**.
-2. Isi:
-   - **Jalankan sebagai:** Saya
-   - **Siapa yang memiliki akses:** Siapa saja
-3. Klik **Deploy**, lalu **salin "URL aplikasi web"** (berakhiran `/exec`).
-
-Cek cepat: tempel URL itu di browser. Bila tampil `{"ok":true,...,"siap":true}`, backend siap.
+Urutannya: **A. Server kelompok → B. Situs GitHub Pages (sekali) → C. Daftarkan Kode Kelompok → D. Pasang di HP.**
 
 ---
 
-## Bagian B — Frontend (GitHub Pages)
+## A. Server untuk satu kelompok (Google Apps Script)
 
-### B1. Ekstrak ZIP dan isi alamat server
-1. Ekstrak **`presensi-sambung.zip`**. Hasilnya folder **`presensi-sambung`** yang langsung berisi `index.html`, `css`, `js`, `fonts`, `icons`, `lib`.
-2. Buka **`presensi-sambung/js/config.js`** dengan Notepad, ganti alamatnya dengan URL `/exec` dari langkah A5:
+Lakukan di **akun Google milik kelompok** (buka jendela Incognito bila memakai laptop sendiri).
 
-```javascript
-API_URL: 'https://script.google.com/macros/s/AKfycb..../exec',
-```
-
-3. Simpan.
-
-### B2. Siapkan Git & repository (sekali saja)
-1. Pasang Git: **https://git-scm.com/download/win** (pengaturan bawaan).
-2. Buat akun di **https://github.com** bila belum punya.
-3. Atur identitas Git (buka **PowerShell**):
-   ```bash
-   git config --global user.name "Nama Anda"
-   git config --global user.email "email-akun-github@gmail.com"
+1. Buka **https://script.google.com** → **Proyek baru** → beri nama **Presensi Sambung**.
+2. Berkas `Code.gs` bawaan → ganti nama menjadi **`Kode`**, hapus isinya, tempel **`Kode.gs`**.
+3. **＋ → Skrip**: buat **`Data`**, **`Media`**, **`Setup`**, tempel isi berkas yang sama namanya.
+4. ⚙️ **Setelan proyek** → centang **Tampilkan file manifes "appsscript.json"** → buka `appsscript.json`, ganti seluruh isinya.
+5. Buka **`Setup`**, ubah bagian atas sesuai kelompok:
+   ```javascript
+   const SETUP = {
+     NAMA_KELOMPOK: 'Sangatta Selatan 2',
+     NAMA_PENEROBOS_UTAMA: 'Nama Penerobos Utama',
+     PIN_AWAL_UTAMA: '123456',
+     PIN_RESET_UTAMA: '654321'
+   };
    ```
-4. Di github.com: **＋ → New repository** → nama misalnya `presensi-sambung` → pilih **Public** → **jangan** centang README → **Create repository**.
+6. Pilih fungsi **`setupAwal`** → ▶ **Jalankan** → izinkan akses (**Lanjutan → Buka Presensi Sambung (tidak aman) → Izinkan**). Log harus menampilkan **✅ Setup selesai!**
+   Sheet yang dibuat: Pengaturan, Penerobos, Peserta, Kegiatan, Presensi, **Dapukan** (berisi Pak Yai, Wakil Yai, Penerobos, Aghnia), **Anggota_Musyawaroh**, Log_Sinkron.
+7. **Deploy → Deployment baru → Aplikasi web** · Jalankan sebagai: **Saya** · Akses: **Siapa saja** → **Deploy** → salin URL yang berakhiran **`/exec`**.
 
-### B3. Masuk ke folder yang BENAR
-Folder yang dikirim ke GitHub adalah **`presensi-sambung`** (yang langsung berisi `index.html`) — **bukan** folder di atasnya.
+Cek cepat: buka URL itu di browser → harus tampil `{"ok":true,...,"siap":true}`.
 
-Cara cepat: buka folder `presensi-sambung` di File Explorer → klik address bar → ketik `powershell` → Enter. Lalu periksa:
+> **Server versi lama (v1.0/v1.1)?** Tidak perlu `setupAwal` lagi. Tempel 4 berkas `.gs` versi baru, lalu **Deploy → Kelola deployment → ✏️ → Versi: Versi baru → Deploy** (URL tetap sama). Sheet & kolom baru (dapukan, notulen) ditambahkan otomatis saat aplikasi pertama kali tersambung, atau jalankan fungsi **`perbaruiDatabase`**.
 
-```powershell
-dir
+---
+
+## B. Situs di GitHub Pages (sekali untuk semua kelompok)
+
+### B1. Isi tiga data di `tenant-config.js`
+Ekstrak **`presensi-sambung.zip`**, buka **`tenant-config.js`** dengan Notepad:
+
+```javascript
+"REPO": "visenasrv/presam",
+"DOMAIN": "visenasrv.github.io/presam",
+"ADMIN_WA": "08xxxxxxxxxx",
+"LEGACY_URL": "",
 ```
 
-Baris yang tampil **harus** memuat `index.html`, `css`, `js`. Bila yang tampil justru folder `presensi-sambung`, ketik `cd presensi-sambung` dulu.
+- `ADMIN_WA` = nomor WA Anda (muncul sebagai tombol *Hubungi admin* di layar kode).
+- `LEGACY_URL` = isi dengan URL `/exec` lama **hanya bila** aplikasi sudah dipakai sebelumnya dengan satu server, agar data di HP Penerobos tetap terbaca.
+- **Jangan ubah `APP_ID`.**
 
-### B4. Kirim ke GitHub (satu per satu)
+### B2. Kirim ke GitHub
+Folder yang dikirim adalah folder yang **langsung berisi `index.html`**. Dari folder itu (PowerShell):
+
 ```bash
 git init
 git add .
-git commit -m "Upload pertama"
+git commit -m "Presensi Sambung v1.2"
 git branch -M main
-git remote add origin https://github.com/USERNAME/presensi-sambung.git
+git remote add origin https://github.com/visenasrv/presam.git
 git push -u origin main
 ```
 
-Saat `git push` meminta **Password**, tempel **Personal Access Token**, bukan password akun:
-- Buat di **https://github.com/settings/tokens** → **Generate new token (classic)** → centang **repo** → **Generate** → salin `ghp_...`.
-- Saat ditempel di terminal, layar **tidak menampilkan apa pun** — itu normal. Tekan Enter.
+Password = **Personal Access Token** (https://github.com/settings/tokens → *Generate new token (classic)* → centang **repo**). Saat ditempel, layar memang tidak menampilkan apa pun.
 
-Tanda berhasil: muncul `Writing objects: 100%` dan `* [new branch] main -> main`.
+### B3. Aktifkan Pages
+Repo → **Settings → Pages** → *Deploy from a branch* → `main` / `(root)` → **Save** → centang **Enforce HTTPS**. Tunggu 1–2 menit.
 
-### B5. Aktifkan GitHub Pages
-Repo di github.com → **Settings → Pages**:
-- **Source:** Deploy from a branch
-- **Branch:** `main` · `/ (root)` → **Save**
-- Centang **Enforce HTTPS**
-
-Tunggu 1–2 menit hingga muncul **"Your site is live at https://USERNAME.github.io/presensi-sambung/"**.
-
-### B6. Pasang di HP setiap Penerobos
-1. Buka alamat tadi di **Chrome HP**.
-2. Masuk dengan PIN (login pertama **harus online**).
-3. Menu Chrome ⋮ → **Tambahkan ke layar utama** / **Instal aplikasi**.
-4. Selanjutnya buka aplikasi dari ikon di layar utama. Aplikasi tetap terbuka walau tanpa internet.
+> Sudah punya repo versi lama? Cukup timpa semua berkas dengan isi ZIP baru, lalu `git add .` → `git commit -m "v1.2"` → `git push`.
 
 ---
 
-## Bagian C — Mulai Memakai
+## C. Daftarkan Kode Kelompok
 
-1. Masuk sebagai **Penerobos Utama** (PIN dari `SETUP`), lalu **Lainnya → Ganti PIN**.
-2. **Peserta → Impor Excel → Unduh Template**, isi data, lalu pilih file tersebut dan **Simpan**.
-3. **Lainnya → Kelola Penerobos → Tambah Penerobos** (maks. 2), beri tahu PIN masing-masing secara pribadi.
-4. **Presensi → + Kegiatan Baru** → isi → **Simpan & Mulai Absen**.
+1. Buka **`https://visenasrv.github.io/presam/kelola.html`**.
+2. Isi **Nama kelompok** → **Buat otomatis** (kode) → tempel **URL `/exec`** dari langkah A7 → **Cek server** → **Simpan ke daftar**.
+3. **Salin isi file** → **Buka di GitHub** → Ctrl+A, Ctrl+V → **Commit changes**.
+4. Tunggu 1 menit → **Uji kode di situs** → harus *sudah aktif*.
+5. **Salin pesan untuk klien** / **Unduh QR** → kirim ke Penerobos Utama kelompok itu.
 
----
-
-## Bagian D — Memperbarui Aplikasi
-
-**Backend** (setelah mengubah `.gs`):
-**Deploy → Kelola deployment → ✏️ Edit → Versi: Versi baru → Deploy.**
-Jangan memilih "Deployment baru" — itu menghasilkan URL baru dan aplikasi di HP berhenti tersambung.
-
-**Frontend** (setelah mengubah berkas di folder `presensi-sambung`):
-1. Buka `sw.js`, naikkan versinya, misalnya `ps-v1.0.0` → `ps-v1.0.1`.
-2. Dari folder `presensi-sambung` jalankan:
-   ```bash
-   git add .
-   git commit -m "Pembaruan"
-   git push
-   ```
-3. Di HP akan muncul pemberitahuan **"Versi baru tersedia → Muat ulang"**.
+Rincian (kelompok nonaktif, pindah HP, dll.): **PANDUAN-SATU-SITUS-BANYAK-KLIEN.md**.
 
 ---
 
-## Bagian E — Masalah Umum
+## D. Pasang di HP setiap Penerobos
 
-| Gejala | Penyebab & solusi |
+Buka tautan dari kelola (`…/?k=KODE`) — kode langsung terisi, lalu masuk dengan PIN (login pertama **harus online**).
+
+**Android (Chrome)**
+1. Bila dibuka dari WhatsApp, ketuk ⋮ → **Buka di Chrome**.
+2. Ketuk **Pasang aplikasi** (pojok kanan atas layar PIN) atau menu **⋮ → Instal aplikasi**.
+3. Selanjutnya buka dari ikon **Presensi** di layar HP. Tetap bisa dibuka tanpa internet.
+
+**iPhone (Safari)**
+1. Buka tautan di **Safari** → tombol **Bagikan** (kotak dengan panah ke atas).
+2. **Tambahkan ke Layar Utama** → **Tambah**.
+3. Buka dari ikonnya. Kode Kelompok & PIN mungkin diminta sekali lagi — itu normal di iPhone.
+
+**Laptop (Chrome/Edge):** klik ikon **Instal** di ujung kanan bilah alamat.
+
+Tombol **Pasang aplikasi di HP** juga ada di **Lainnya → Data & Aplikasi** (hanya muncul bila HP mendukung dan belum terpasang).
+
+---
+
+## E. Mulai memakai (Penerobos Utama)
+
+1. **Lainnya → Ganti PIN**.
+2. **Peserta → Impor Excel** (atau tambah satu per satu).
+3. **Lainnya → Dapukan Musyawaroh** → atur dapukan (tambah/ubah/hapus/urutkan) → **Pilih anggota dari Data Peserta**.
+4. **Lainnya → Warna Aplikasi** → pilih warna kelompok (berlaku di semua HP).
+5. **Lainnya → Format Laporan WA/PDF** → atur template **Sambung** dan **Musyawaroh**.
+6. **Lainnya → Kelola Penerobos** → tambah maks. 2 Penerobos.
+7. **Presensi → Kegiatan Baru** → pilih **Sambung** atau **Musyawaroh**.
+
+---
+
+## F. Memperbarui aplikasi
+
+**Backend:** tempel `.gs` baru → **Deploy → Kelola deployment → ✏️ → Versi baru**. Jangan "Deployment baru" (URL berubah → kode kelompok harus didaftarkan ulang). Ulangi di akun setiap kelompok.
+
+**Frontend:** ubah berkas → naikkan `VERSION` di `sw.js` (mis. `ps-v1.2.0` → `ps-v1.2.1`) → `git add .` → `git commit -m "Pembaruan"` → `git push`. Di HP muncul **Versi baru tersedia → Muat ulang**. Tanpa menaikkan versi, HP tetap memakai versi lama.
+
+---
+
+## G. Masalah umum
+
+| Gejala | Solusi |
 |---|---|
-| Layar PIN: "API_URL belum diisi" | `js/config.js` belum diisi URL `/exec`. Isi, lalu push ulang. |
-| "Server membalas tidak sesuai" | URL salah atau akses deploy bukan **Siapa saja**. Cek langkah A5. |
-| "Server belum disiapkan" | `setupAwal` belum dijalankan. Lihat A4. |
-| Situs GitHub 404 | Yang di-push folder induk. Ulangi B3–B4 dari folder yang berisi `index.html` (pakai `git push -u origin main --force`). |
-| Lupa PIN Penerobos Utama | Ubah `PIN_RESET_UTAMA` di `Setup`, jalankan fungsi **`resetPinUtama`**. |
-| Data di Sheets diedit manual tidak muncul di HP | Jalankan fungsi **`bersihkanCache`**, lalu di HP: **Lainnya → Muat ulang data dari server**. |
-| Cek kondisi server | Jalankan fungsi **`cekSetup`** dan baca lognya. |
-| Ingin melihat kecepatan | Buka Chrome di laptop → F12 → Console → ketik `Perf.table()`. |
+| "Kode Kelompok tidak ditemukan" | Tunggu 1 menit setelah Commit. Kirim tautan `?k=` agar tidak salah ketik. |
+| Layar "Aplikasi ini sedang nonaktif" | Kelompok diset Nonaktif di kelola.html. Ubah ke Aktif, Commit, lalu ketuk *Periksa lagi*. |
+| "Server membalas tidak sesuai" | URL `/exec` salah atau akses deploy bukan **Siapa saja**. |
+| "Server belum disiapkan" | `setupAwal` belum dijalankan di akun kelompok itu. |
+| Situs GitHub 404 | Yang di-push folder induk. Push dari folder yang berisi `index.html`. |
+| Tombol Pasang aplikasi tidak muncul | Buka di Chrome (bukan dari dalam WhatsApp) atau Safari di iPhone; atau aplikasi sudah terpasang. |
+| Lupa PIN Penerobos Utama | Ubah `PIN_RESET_UTAMA` di `Setup`, jalankan **`resetPinUtama`**. |
+| Data di Sheets diedit manual tidak muncul | Jalankan **`bersihkanCache`**, lalu di HP **Lainnya → Muat ulang data dari server**. |
+| Cek kondisi server | Jalankan **`cekSetup`**. |
 
-**Penting:** jangan menghapus data situs/riwayat Chrome di HP saat masih ada data **belum terkirim** (lihat pill di kanan atas). Selama pill menunjukkan **Online**, semua data sudah aman di Google Sheets.
+**Penting:** jangan menghapus data situs Chrome di HP saat pill di kanan atas masih menunjukkan **belum terkirim**.

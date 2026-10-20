@@ -8,12 +8,13 @@ function kegiatanCard(k, opt) {
   const st = Store.stats(k.id) || { total: 0, jml: 0, L: 0, P: 0, pct: 0 };
   const draft = k.status !== 'SELESAI';
   return '<div class="card ' + (draft && opt.active ? 'active' : '') + '">' +
-    '<div class="pill-row between">' + UI.lvl(k.tingkat) + UI.status(k) + '</div>' +
+    '<div class="pill-row between">' + UI.lvl(k.tingkat, k.jenis) + UI.status(k) + '</div>' +
     '<div class="card-title">' + esc(k.judul) + '</div>' +
     '<div class="meta-row">' + (k.jam ? ic('clock', 16) + '<span class="num">' + esc(k.jam) + '</span><span class="sep"></span>' : '') + ic('map-pin', 16) + '<span class="ellipsis">' + esc(k.tempat) + '</span></div>' +
     '<div class="att-box"><div class="row1"><span class="num">Hadir ' + st.total + '/' + st.jml + '</span><span class="pct num">' + Fmt.pct(st.total, st.jml) + '</span></div>' +
       '<div class="progress"><span style="width:' + Math.min(100, st.pct).toFixed(1) + '%"></span></div>' +
-      '<div class="row2"><span>Dibuat oleh ' + esc(Store.nameOf(k.by)) + '</span><span class="num">L ' + st.L + ' · P ' + st.P + '</span></div></div>' +
+      '<div class="row2"><span>Dibuat oleh ' + esc(Store.nameOf(k.by)) + '</span>' +
+        (isMusy(k) ? '<span>' + (k.notulen ? ic('notebook-pen', 14) + ' Notulen ✓' : 'Notulen belum diisi') + '</span>' : '<span class="num">L ' + st.L + ' · P ' + st.P + '</span>') + '</div></div>' +
     (draft
       ? '<button class="btn ' + (opt.active ? 'btn-primary' : 'btn-secondary') + ' btn-block" style="margin-top:14px" data-go="#/absen/' + esc(k.id) + '">' + (opt.active ? 'Lanjutkan Absen ' + ic('arrow-right', 18) : 'Buka') + '</button>'
       : '<button class="btn btn-secondary btn-block" style="margin-top:14px" data-go="#/detail/' + esc(k.id) + '">Lihat Detail &amp; Laporan</button>') +
@@ -54,9 +55,12 @@ Pages.kegiatan = {
     el.innerHTML =
       '<div class="js-head"></div>' +
       '<form class="pad" novalidate id="kgForm">' +
-        '<div class="field"><div class="label"><span>Tingkat Sambung<span class="req">*</span></span></div>' +
-          '<div class="seg" role="radiogroup" id="kgTingkat">' + ['Kelompok', 'Desa', 'Daerah'].map((t) => '<button type="button" role="radio" data-t="' + t + '">' + t + '</button>').join('') + '</div>' +
-          '<div class="help">Pilih lingkup kegiatan sambung yang akan diabsen.</div></div>' +
+        '<div class="field js-jenisf"><div class="label"><span>Jenis Kegiatan<span class="req">*</span></span></div>' +
+          '<div class="seg" role="radiogroup" id="kgJenis"><button type="button" role="radio" data-j="SAMBUNG">' + ic('users', 18) + 'Sambung</button>' +
+          '<button type="button" role="radio" data-j="MUSYAWAROH">' + ic('messages-square', 18) + 'Musyawaroh</button></div>' +
+          '<div class="help js-jenishelp"></div></div>' +
+        '<div class="field"><div class="label"><span><span class="js-tlabel">Tingkat Sambung</span><span class="req">*</span></span></div>' +
+          '<div class="seg" role="radiogroup" id="kgTingkat">' + ['Kelompok', 'Desa', 'Daerah'].map((t) => '<button type="button" role="radio" data-t="' + t + '">' + t + '</button>').join('') + '</div></div>' +
         '<div class="field"><label class="label" for="kgJudul"><span>Judul Kegiatan<span class="req">*</span></span><span class="err-inline" data-err="judul" hidden></span></label>' +
           '<div class="input-wrap"><input class="input" id="kgJudul" name="judul" maxlength="120" placeholder="contoh: Pengajian Rutin" autocomplete="off" list="dlJudul" enterkeyhint="next">' +
           '<button type="button" class="clear-btn" data-clear="kgJudul" hidden aria-label="Kosongkan">' + ic('x', 16) + '</button></div><datalist id="dlJudul"></datalist></div>' +
@@ -75,6 +79,7 @@ Pages.kegiatan = {
         '<button class="btn btn-primary grow" type="button" id="kgSave"></button></div></div>';
     const seg = $('#kgTingkat', el);
     seg.onclick = (e) => { const b = e.target.closest('[data-t]'); if (b) this.setTingkat(b.dataset.t); };
+    $('#kgJenis', el).onclick = (e) => { const b = e.target.closest('[data-j]'); if (b && !this.editId) this.setJenis(b.dataset.j); };
     const judul = $('#kgJudul', el), clr = $('[data-clear]', el);
     judul.addEventListener('input', () => { clr.hidden = !judul.value; this.clearErr('judul'); });
     clr.onclick = () => { judul.value = ''; clr.hidden = true; judul.focus(); };
@@ -91,7 +96,9 @@ Pages.kegiatan = {
     const editId = params[0] === 'ubah' ? params[1] : null;
     const kg = editId ? S.kegiatan.get(editId) : null;
     this.editId = kg ? kg.id : null;
-    $('.js-head', el).innerHTML = UI.focusHead({ title: kg ? 'Ubah Kegiatan' : 'Kegiatan Baru', sub: kg ? kg.judul : 'Buat kegiatan sambung' });
+    $('.js-head', el).innerHTML = UI.focusHead({ title: kg ? 'Ubah Kegiatan' : 'Kegiatan Baru', sub: kg ? kg.judul : 'Sambung atau musyawaroh' });
+    $('.js-jenisf', el).hidden = !!kg;                       // jenis tidak bisa diubah setelah dibuat
+    this.setJenis(kg ? (kg.jenis || 'SAMBUNG') : (params[0] === 'musyawaroh' ? MUSY : LS.get('lastJenis', 'SAMBUNG')));
     $('#kgSave', el).innerHTML = kg ? ic('check', 20) + 'Simpan Perubahan' : 'Simpan &amp; Mulai Absen ' + ic('arrow-right', 20);
     const last = LS.get('lastTingkat', 'Kelompok');
     this.setTingkat(kg ? kg.tingkat : last);
@@ -102,16 +109,32 @@ Pages.kegiatan = {
     this.jamUI();
     $('#kgTempat', el).value = kg ? kg.tempat : LS.get('lastTempat', '');
     ['judul', 'tempat'].forEach((f) => this.clearErr(f));
-    // Saran dari kegiatan sebelumnya
-    const uniq = (f) => [...new Set(Store.kegiatanAll().map((k) => k[f]).filter(Boolean))].slice(0, 12);
-    $('#dlJudul', el).innerHTML = uniq('judul').map((v) => '<option value="' + esc(v) + '">').join('');
-    $('#dlTempat', el).innerHTML = uniq('tempat').map((v) => '<option value="' + esc(v) + '">').join('');
+    this.suggest();                                           // saran dari kegiatan sebelumnya
     if (!kg) setTimeout(() => $('#kgJudul', el).focus({ preventScroll: true }), 200);
   },
   jamUI() {
     const v = $('#kgJam', this.el).value;
     $('.js-jamx', this.el).hidden = !v;
     $('.js-jamnow', this.el).hidden = !!v;
+  },
+  setJenis(j) {
+    this.jenis = j === MUSY ? MUSY : 'SAMBUNG';
+    const m = this.jenis === MUSY, el = this.el;
+    $$('#kgJenis [data-j]', el).forEach((b) => { const on = b.dataset.j === this.jenis; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
+    $('.js-tlabel', el).textContent = m ? 'Tingkat Musyawaroh' : 'Tingkat Sambung';
+    const n = Store.anggotaAll().length;
+    $('.js-jenishelp', el).innerHTML = m
+      ? (n ? 'Yang diabsen: ' + n + ' anggota musyawaroh (sesuai dapukan). Notulen bisa ditulis saat absen.'
+           : '<span class="error-text" style="display:inline">Belum ada anggota musyawaroh.</span> ' + (Store.isUtama() ? 'Atur di Lainnya → Dapukan Musyawaroh.' : 'Minta Penerobos Utama mengatur dapukan.'))
+      : 'Yang diabsen: semua peserta sambung.';
+    $('#kgJudul', el).placeholder = m ? 'contoh: Musyawaroh Bulanan' : 'contoh: Pengajian Rutin';
+    if (!this.editId) this.suggest();
+  },
+  suggest() {
+    const el = this.el, list = this.jenis === MUSY ? Store.kegiatanMusy() : Store.kegiatanSambung();
+    const uniq = (f) => [...new Set(list.map((k) => k[f]).filter(Boolean))].slice(0, 12);
+    $('#dlJudul', el).innerHTML = uniq('judul').map((v) => '<option value="' + esc(v) + '">').join('');
+    $('#dlTempat', el).innerHTML = [...new Set(Store.kegiatanAll().map((k) => k.tempat).filter(Boolean))].slice(0, 12).map((v) => '<option value="' + esc(v) + '">').join('');
   },
   setTingkat(t) {
     this.tingkat = t;
@@ -143,7 +166,8 @@ Pages.kegiatan = {
     if (jam && !/^\d{2}:\d{2}$/.test(jam)) { Toast.show('Format jam tidak valid.', 'err'); bad = true; }
     if (bad) { haptic([20, 30, 20]); return; }
     LS.set('lastTingkat', this.tingkat); LS.set('lastTempat', tempat);
-    const id = await Store.saveKegiatan({ id: this.editId, tingkat: this.tingkat, judul, tanggal, jam, tempat });
+    if (!this.editId) LS.set('lastJenis', this.jenis);
+    const id = await Store.saveKegiatan({ id: this.editId, jenis: this.jenis, tingkat: this.tingkat, judul, tanggal, jam, tempat });
     if (this.editId) { Toast.show('Perubahan kegiatan disimpan'); App.back('detail/' + id); }
     else App.replace('#/absen/' + id);
   }

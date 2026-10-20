@@ -55,10 +55,14 @@ function norm(s) { return String(s || '').toLowerCase().normalize('NFKD').replac
 const collator = new Intl.Collator('id', { sensitivity: 'base', numeric: true });
 const byNama = (a, b) => collator.compare(a.nama, b.nama);
 
+/** localStorage per kelompok (awalan TENANT_NS) + getG/setG untuk setelan perangkat (tema terang/gelap). */
 const LS = {
-  get(k, d) { try { const v = localStorage.getItem('ps:' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
-  set(k, v) { try { localStorage.setItem('ps:' + k, JSON.stringify(v)); } catch (e) {} },
-  del(k) { try { localStorage.removeItem('ps:' + k); } catch (e) {} }
+  p() { return 'ps:' + (window.TENANT_NS || ''); },
+  get(k, d) { try { const v = localStorage.getItem(this.p() + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(this.p() + k, JSON.stringify(v)); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(this.p() + k); } catch (e) {} },
+  getG(k, d) { try { const v = localStorage.getItem('ps:' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  setG(k, v) { try { localStorage.setItem('ps:' + k, JSON.stringify(v)); } catch (e) {} }
 };
 
 /** Bus peristiwa sederhana: 'data', 'sync', 'route' */

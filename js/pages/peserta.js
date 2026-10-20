@@ -62,10 +62,10 @@ Pages.peserta = {
     if (!list.length) { box.innerHTML = emptyState('search', 'Peserta tidak ditemukan', 'Coba kata kunci lain.'); return; }
     box.innerHTML = list.map((p) => {
       const a = att.get(p.id), pct = a && a.pct !== null ? a.pct : null;
-      const open = this.open === p.id;
+      const open = this.open === p.id, dk = Store.dapukanOf(p.id);
       return '<div class="card person-card ' + (open ? 'open' : '') + '" data-id="' + esc(p.id) + '"><div style="display:flex;align-items:center;gap:12px">' +
         '<span class="avatar ' + p.jk + '">' + esc(Fmt.initials(p.nama)) + '</span>' +
-        '<div class="row-main"><div class="row-title">' + esc(p.nama) + '</div><div class="row-sub">' + UI.jk(p.jk) +
+        '<div class="row-main"><div class="row-title">' + esc(p.nama) + '</div><div class="row-sub">' + UI.jk(p.jk) + (dk ? '<span class="pill sm musy">' + esc(dk.nama) + '</span>' : '') +
           (p.lahir ? '<span class="num">' + esc(Fmt.dMon(p.lahir)) + '</span>' : '<span style="font-style:italic">Tgl lahir —</span>') + '</div></div>' +
         '<div class="row-end"><div class="pct-big ' + (pct === null ? 'muted' : Fmt.pctClass(pct)) + '">' + (pct === null ? '—' : Math.round(pct) + '%') + '</div><div class="pct-cap">kehadiran</div></div>' +
         (utama ? '<button class="icon-btn plain" data-act="menu" data-id="' + esc(p.id) + '" aria-label="Aksi">' + ic('ellipsis-vertical', 20) + '</button>' : '') +
@@ -279,7 +279,7 @@ function parseTanggal(v, X) {
     return null;
   }
   m = s.match(/^(\d{4})[\/.\-](\d{1,2})[\/.\-](\d{1,2})/);
-  if (m) return m[1] + '-' + p2(+m[2]) + '-' + p2(+m[3]);
+  if (m) return +m[2] >= 1 && +m[2] <= 12 && +m[3] >= 1 && +m[3] <= 31 ? m[1] + '-' + p2(+m[2]) + '-' + p2(+m[3]) : null;
   m = s.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/);
   if (m) {
     const idx = BULAN.concat(BULAN3).map((b) => b.toLowerCase()).findIndex((b) => m[2].toLowerCase().indexOf(b.slice(0, 3)) === 0);
