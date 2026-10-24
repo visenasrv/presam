@@ -63,8 +63,8 @@ Pages.absen = {
       $('.action-bar', el).hidden = true; return;
     }
     $('.action-bar', el).hidden = false;
-    this.musy = isMusy(kg);
-    this.tab = this.musy ? (params[1] === 'notulen' ? 'N' : 'H') : LS.get('absenTab', 'L');
+    this.musy = isMusy(kg); this.ibu = isIbu(kg);
+    this.tab = this.musy ? (params[1] === 'notulen' ? 'N' : 'H') : this.ibu ? 'P' : LS.get('absenTab', 'L');
     if (!this.musy && this.tab !== 'P') this.tab = 'L';
     this.nDirty = false;
     $('.js-nta', el).value = kg.notulen || '';
@@ -72,10 +72,13 @@ Pages.absen = {
     this.notulenStat(kg.notulen ? 'Tersimpan' : '');
     $('.js-tabs', el).innerHTML = this.musy
       ? '<button class="tab" role="tab" data-tab="H">' + ic('users', 17) + 'Kehadiran <span class="badge js-cH"></span></button><button class="tab" role="tab" data-tab="N">' + ic('notebook-pen', 17) + 'Notulen <span class="badge js-cN"></span></button>'
+      : this.ibu
+      ? '<button class="tab one" role="tab" data-tab="P">' + ic('users-round', 17) + 'Peserta Perempuan <span class="badge js-cP"></span></button><span class="js-cL" hidden></span>'
       : '<button class="tab" role="tab" data-tab="L">Laki-laki <span class="badge js-cL"></span></button><button class="tab" role="tab" data-tab="P">Perempuan <span class="badge js-cP"></span></button>';
+    $('.js-tabs', el).classList.toggle('one', this.ibu);
     this.filter = 'all'; this.q = '';
     $('.js-q', el).value = ''; $('.js-qx', el).hidden = true;
-    $('.js-head', el).innerHTML = UI.focusHead({ title: this.musy ? 'Absen Musyawaroh' : 'Absen', sub: UI.jenisLabel(kg) + ' · ' + kg.judul, right: UI.pill() + '<button class="icon-btn plain" data-more aria-label="Menu lainnya">' + ic('ellipsis-vertical', 22) + '</button>' });
+    $('.js-head', el).innerHTML = UI.focusHead({ title: this.musy ? 'Absen Musyawaroh' : this.ibu ? 'Absen Ibu-ibu' : 'Absen', sub: UI.jenisLabel(kg) + ' · ' + kg.judul, right: UI.pill() + '<button class="icon-btn plain" data-more aria-label="Menu lainnya">' + ic('ellipsis-vertical', 22) + '</button>' });
     this.renderHead(kg);
     this.build();
     if (!Store.prLoaded(kg)) this.loadOld(kg);
@@ -177,7 +180,7 @@ Pages.absen = {
   },
 
   setTab(t) {
-    if (t === this.tab) return;
+    if (t === this.tab || (this.ibu && t !== 'P')) return;
     if (this.tab === 'N') this.saveNotulen();
     this.tab = t; if (!this.musy) LS.set('absenTab', t);
     this.build();
@@ -232,7 +235,7 @@ Pages.absen = {
     $('.js-filters', el).innerHTML = f.map((x) => '<button class="chip ' + (this.filter === x[0] ? 'on' : '') + '" data-f="' + x[0] + '">' + x[1] + ' <span class="count">' + x[2] + '</span></button>').join('');
     const jml = kg.status === 'SELESAI' && kg.jml > 0 ? kg.jml : this.people.length;
     const c = $('.js-counter', el);
-    c.innerHTML = '<span><span class="dot"></span><b>Hadir</b> <span class="lp">' + (this.musy ? 'anggota musyawaroh' : 'L ' + L + ' · P ' + P) + '</span></span>' +
+    c.innerHTML = '<span><span class="dot"></span><b>Hadir</b> <span class="lp">' + (this.musy ? 'anggota musyawaroh' : this.ibu ? 'peserta perempuan' : 'L ' + L + ' · P ' + P) + '</span></span>' +
       '<span class="tot">Total <b class="num">' + (L + P) + '/' + jml + '</b> <span class="lp">(' + Fmt.pct(L + P, jml) + ')</span></span>';
     if (bump) { c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); }
   },

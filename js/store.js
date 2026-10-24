@@ -17,11 +17,19 @@ const DEFAULT_TEMPLATE_MUSY = [
   '*Hasil Musyawaroh*', '{notulen}'
 ].join('\n');
 
+const DEFAULT_TEMPLATE_IBU = [
+  '*Pengajian Ibu-ibu {tingkat}*', '*{judul}*', 'Kelompok {nama_kelompok}', '📅 {hari_tanggal}', '🕐 {jam}', '📍 {tempat}', '',
+  'Hadir: {jumlah_hadir} dari {jumlah_peserta} ({persentase})', '', '{daftar_hadir}'
+].join('\n');
+
 const DEFAULT_CFG = {
-  nama_kelompok: '', template_wa: DEFAULT_TEMPLATE_WA, template_musy: DEFAULT_TEMPLATE_MUSY, pdf_tampilkan_tidak_hadir: false,
+  nama_kelompok: '', template_wa: DEFAULT_TEMPLATE_WA, template_musy: DEFAULT_TEMPLATE_MUSY, template_ibu: DEFAULT_TEMPLATE_IBU, pdf_tampilkan_tidak_hadir: false,
   ambang_sering_tidak_hadir: 50, jumlah_kegiatan_evaluasi: 8, tema_warna: ''
 };
 const MUSY = 'MUSYAWAROH';
+const IBU = 'IBU';                                   // Pengajian Ibu-ibu: hanya peserta perempuan
+const JENIS = ['SAMBUNG', MUSY, IBU];
+const jenisOk = (j) => (JENIS.indexOf(j) > -1 ? j : 'SAMBUNG');
 
 const S = {
   me: null, token: '', exp: 0,
@@ -53,6 +61,7 @@ function pnrMap(list) {
 function prRec(kid, pid, r) { const o = { k: kid + '|' + pid, kid, pid, h: r.h, t: r.t, by: r.by }; if (r.dk) o.dk = r.dk; return o; }
 function prVal(r) { const o = { h: r.h, t: r.t, by: r.by }; if (r.dk) o.dk = r.dk; return o; }
 const isMusy = (k) => !!k && k.jenis === MUSY;
+const isIbu = (k) => !!k && k.jenis === IBU;
 
 const Store = {
   /* ---------- Sesi ---------- */
@@ -228,7 +237,7 @@ const Store = {
   saveKegiatan(k) {
     const id = k.id || uid();
     const cur = k.id ? S.kegiatan.get(k.id) : null;
-    const jenis = cur ? (cur.jenis || 'SAMBUNG') : (k.jenis === MUSY ? MUSY : 'SAMBUNG');
+    const jenis = cur ? jenisOk(cur.jenis) : jenisOk(k.jenis);
     return this.mutate('kegiatan.upsert', 'kg:' + id, { id, jenis, tingkat: k.tingkat, judul: k.judul.trim(), tanggal: k.tanggal, jam: k.jam, tempat: k.tempat.trim(), t: Date.now() })
       .then(() => id);
   },
@@ -294,8 +303,10 @@ const Store = {
     return memo('kgAll', () => [...S.kegiatan.values()].filter((k) => !k.del)
       .sort((a, b) => (b.tanggal + (b.jam || '')).localeCompare(a.tanggal + (a.jam || ''))));
   },
-  kegiatanSambung() { return memo('kgSb', () => this.kegiatanAll().filter((k) => !isMusy(k))); },
+  kegiatanSambung() { return memo('kgSb', () => this.kegiatanAll().filter((k) => jenisOk(k.jenis) === 'SAMBUNG')); },
   kegiatanMusy() { return memo('kgMs', () => this.kegiatanAll().filter(isMusy)); },
+  kegiatanIbu() { return memo('kgIb', () => this.kegiatanAll().filter(isIbu)); },
+  kegiatanJenis(j) { return j === MUSY ? this.kegiatanMusy() : j === IBU ? this.kegiatanIbu() : this.kegiatanSambung(); },
   pesertaAll() { return memo('psAll', () => [...S.peserta.values()].sort(byNama)); },
   pesertaAktif() { return memo('psAktif', () => this.pesertaAll().filter((p) => p.status !== 'DIHAPUS')); },
   prLoaded(kg) { return !S.window || kg.tanggal >= S.window || kg.status === 'DRAFT' || S.presensi.has(kg.id); },
@@ -315,7 +326,8 @@ const Store = {
             return oa - ob || collator.compare(a.dkNama, b.dkNama) || byNama(a, b);
           });
       }
-      return this.pesertaAll().filter((p) => p.status !== 'DIHAPUS' || (p.hapus && p.hapus > kg.tanggal) || hadir(p));
+      const ibu = isIbu(kg);
+      return this.pesertaAll().filter((p) => (!ibu || p.jk === 'P') && (p.status !== 'DIHAPUS' || (p.hapus && p.hapus > kg.tanggal) || hadir(p)));
     });
   },
   /** Label dapukan seseorang di sebuah musyawaroh: catatan saat hadir → dapukan sekarang → "Lainnya". */
@@ -439,7 +451,7 @@ function applyOpLocal(op) {
     case 'kegiatan.upsert': {
       const cur = S.kegiatan.get(d.id);
       S.kegiatan.set(d.id, Object.assign({ status: 'DRAFT', jml: 0, hl: 0, hp: 0, f1: '', f2: '', pdf: '', pdfStale: false, pdfAt: '', by: op.by, del: false, s: 0,
-        jenis: d.jenis === MUSY ? MUSY : 'SAMBUNG', notulen: '', nt: 0, nby: '' },
+        jenis: jenisOk(d.jenis), notulen: '', nt: 0, nby: '' },
         cur || {}, { id: d.id, tingkat: d.tingkat, judul: d.judul, tanggal: d.tanggal, jam: d.jam, tempat: d.tempat, t: d.t }));
       break;
     }

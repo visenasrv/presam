@@ -12,9 +12,10 @@ const Pages = {};
 const UI = {
   lvl(t, jenis) {
     if (jenis === MUSY) return '<span class="pill musy">' + ic('messages-square', 14) + 'Musyawaroh ' + esc(t) + '</span>';
+    if (jenis === IBU) return '<span class="pill ibu">' + ic('users-round', 14) + 'Pengajian Ibu ' + esc(t) + '</span>';
     return '<span class="pill lvl-' + esc(t) + '">Sambung ' + esc(t) + '</span>';
   },
-  jenisLabel(kg) { return (isMusy(kg) ? 'Musyawaroh ' : 'Sambung ') + kg.tingkat; },
+  jenisLabel(kg) { return (isMusy(kg) ? 'Musyawaroh ' : isIbu(kg) ? 'Pengajian Ibu-ibu ' : 'Sambung ') + kg.tingkat; },
   /** Tombol "Pasang aplikasi" — tampil hanya bila HP/browser bisa memasang (lihat pwa.js). */
   installBtn(cls) { return '<button type="button" class="' + (cls || 'btn btn-ghost btn-block') + '" data-pwa-install hidden>' + ic('smartphone', 18) + 'Pasang aplikasi di HP</button>'; },
   bindInstall(root) {

@@ -10,9 +10,9 @@ Pages.riwayat = {
 
   mount(el) {
     el.innerHTML =
-      '<div class="page-head" style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div><h1 class="h1">Riwayat Kegiatan</h1><div class="page-sub">Arsip sambung &amp; musyawaroh</div></div>' +
+      '<div class="page-head" style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div><h1 class="h1">Riwayat Kegiatan</h1><div class="page-sub">Arsip sambung, musyawaroh &amp; pengajian ibu-ibu</div></div>' +
         '<button class="btn btn-ghost btn-sm js-pick" style="margin-top:4px" hidden>' + ic('check-check', 18) + 'Pilih</button></div>' +
-      '<div class="seg js-jenis" style="margin-bottom:12px"></div>' +
+      '<div class="chips js-jenis" style="margin-bottom:12px"></div>' +
       '<div class="search input-wrap">' + ic('search', 20) + '<input class="input js-q" type="search" placeholder="Cari judul, tempat, atau isi notulen…" autocomplete="off" aria-label="Cari kegiatan"></div>' +
       '<div class="chips js-filters" style="margin-bottom:4px"></div>' +
       '<div class="js-list"></div>' +
@@ -89,9 +89,9 @@ Pages.riwayat = {
 
   renderFilters() {
     const f = this.f;
-    const nM = Store.kegiatanMusy().length, nA = Store.kegiatanAll().length;
-    $('.js-jenis', this.el).innerHTML = [['', 'Semua', nA], ['SAMBUNG', 'Sambung', nA - nM], ['MUSYAWAROH', 'Musyawaroh', nM]]
-      .map((x) => '<button type="button" data-jenis="' + x[0] + '" class="' + (f.jenis === x[0] ? 'on' : '') + '">' + x[1] + ' <span class="count">' + x[2] + '</span></button>').join('');
+    $('.js-jenis', this.el).innerHTML = [['', 'Semua', Store.kegiatanAll().length], ['SAMBUNG', 'Sambung', Store.kegiatanSambung().length],
+      ['MUSYAWAROH', 'Musyawaroh', Store.kegiatanMusy().length], ['IBU', 'Pengajian Ibu-ibu', Store.kegiatanIbu().length]]
+      .map((x) => '<button type="button" data-jenis="' + x[0] + '" class="chip ' + (f.jenis === x[0] ? 'on' : '') + '">' + x[1] + ' <span class="count">' + x[2] + '</span></button>').join('');
     const sel = (name, label, opts) => '<label class="chip select ' + (f[name] ? 'on' : '') + '">' + esc(label) + ic('chevron-down', 16) +
       '<select data-f="' + name + '">' + opts.map((o) => '<option value="' + o[0] + '"' + (f[name] === o[0] ? ' selected' : '') + '>' + o[1] + '</option>').join('') + '</select></label>';
     $('.js-filters', this.el).innerHTML =
@@ -103,7 +103,7 @@ Pages.riwayat = {
   filtered() {
     const f = this.f, pend = Store.pendingKegiatan();
     return Store.kegiatanAll().filter((k) =>
-      (!f.jenis || (f.jenis === 'MUSYAWAROH') === isMusy(k)) &&
+      (!f.jenis || f.jenis === jenisOk(k.jenis)) &&
       (!f.tingkat || k.tingkat === f.tingkat) &&
       (!f.status || (f.status === 'PENDING' ? pend.has(k.id) : k.status === f.status)) &&
       (!f.from || k.tanggal >= f.from) && (!f.to || k.tanggal <= f.to) &&

@@ -117,7 +117,7 @@ Pages.beranda = {
           (lastSt ? '<div class="stat-value">' + lastSt.total + '<small>/' + lastSt.jml + '</small></div><div class="stat-foot ok">' + Fmt.pct(lastSt.total, lastSt.jml) + ' hadir</div>'
                   : '<div class="stat-value">—</div><div class="stat-foot">Belum ada kegiatan</div>') + '</div>' +
       '</div>' +
-      this.musyCard(R, mSet, f, today, counted) +
+      this.jenisCard(MUSY, R, mSet, f, today, counted) + this.jenisCard(IBU, R, mSet, f, today, counted) +
       '<div class="card chart-card" style="margin-top:12px"><div><h3 class="h2" style="font-size:16.5px">Hadir per Kegiatan</h3><div class="page-sub" style="font-size:13px;margin-top:2px">10 kegiatan terakhir · ' + esc(R.label.toLowerCase()) + '</div>' +
         '<div class="chart-legend"><span><i style="background:var(--chart-male)"></i>Laki-laki</span><span><i style="background:var(--chart-female)"></i>Perempuan</span></div></div>' +
         '<div class="chart" id="chBars"></div></div>' +
@@ -133,15 +133,16 @@ Pages.beranda = {
     Charts.line($('#chLine', el), months);
   },
 
-  musyCard(R, mSet, f, today, counted) {
-    const ms = Store.kegiatanMusy().filter((k) => !f.tingkat || k.tingkat === f.tingkat);
+  jenisCard(jenis, R, mSet, f, today, counted) {
+    const ms = Store.kegiatanJenis(jenis).filter((k) => !f.tingkat || k.tingkat === f.tingkat);
+    const ibu = jenis === IBU;
     if (!ms.length) return '';
     const inP = ms.filter((k) => mSet.has(k.tanggal.slice(0, 7)));
     const avg = mean(counted(inP).map((k) => Store.stats(k.id).pct));
     const last = ms.find((k) => k.tanggal <= today) || ms[0];
     return '<a class="card musy-sum tap" href="#/' + (last.status === 'SELESAI' ? 'detail/' : 'absen/') + esc(last.id) + '" style="margin-top:12px;color:inherit">' +
-      '<span class="stat-ic">' + ic('messages-square', 20) + '</span><div class="row-main"><div class="row-title">Musyawaroh · ' + esc(R.label) + '</div>' +
-      '<div class="row-sub">' + inP.length + ' kali' + (avg === null ? '' : ' · rata-rata hadir ' + Math.round(avg) + '%') + ' · terakhir ' + esc(Fmt.short(last.tanggal)) + (last.notulen ? ' · notulen ✓' : '') + '</div></div>' +
+      '<span class="stat-ic' + (ibu ? ' ibu' : '') + '">' + ic(ibu ? 'users-round' : 'messages-square', 20) + '</span><div class="row-main"><div class="row-title">' + (ibu ? 'Pengajian Ibu-ibu' : 'Musyawaroh') + ' · ' + esc(R.label) + '</div>' +
+      '<div class="row-sub">' + inP.length + ' kali' + (avg === null ? '' : ' · rata-rata hadir ' + Math.round(avg) + '%') + ' · terakhir ' + esc(Fmt.short(last.tanggal)) + (!ibu && last.notulen ? ' · notulen ✓' : '') + '</div></div>' +
       ic('chevron-right', 18, 'muted') + '</a>';
   },
 

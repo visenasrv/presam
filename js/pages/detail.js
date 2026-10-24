@@ -48,9 +48,9 @@ Pages.detail = {
       $('.action-bar', el).hidden = true; return;
     }
     $('.action-bar', el).hidden = false;
-    const musy = isMusy(kg);
+    const musy = isMusy(kg), ibu = isIbu(kg);
     $('.js-edit', el).innerHTML = ic('pencil', 20) + (musy ? 'Edit Presensi &amp; Notulen' : 'Edit Presensi');
-    $('.js-head', el).innerHTML = UI.focusHead({ title: musy ? 'Detail Musyawaroh' : 'Detail Kegiatan', sub: UI.jenisLabel(kg), right: '<button class="icon-btn plain" data-act="more" aria-label="Menu lainnya">' + ic('ellipsis-vertical', 22) + '</button>' });
+    $('.js-head', el).innerHTML = UI.focusHead({ title: musy ? 'Detail Musyawaroh' : ibu ? 'Detail Pengajian Ibu-ibu' : 'Detail Kegiatan', sub: UI.jenisLabel(kg), right: '<button class="icon-btn plain" data-act="more" aria-label="Menu lainnya">' + ic('ellipsis-vertical', 22) + '</button>' });
     const st = Store.stats(kg.id);
     const pct = st.pct, R = 25, C = 2 * Math.PI * R;
     const sub = (n, d) => d ? 'dari ' + d + ' terdaftar (' + Fmt.pct(n, d) + ')' : '';
@@ -68,11 +68,11 @@ Pages.detail = {
       '</div>' +
       '<div class="section-label">Ringkasan Kehadiran</div>' +
       '<div class="stat-grid">' +
-        '<div class="card stat"><div class="stat-label">Total Hadir</div><div class="stat-value">' + st.total + '</div><div class="stat-foot">dari ' + st.jml + (musy ? ' anggota' : ' peserta') + '</div></div>' +
+        '<div class="card stat"><div class="stat-label">Total Hadir</div><div class="stat-value">' + st.total + '</div><div class="stat-foot">dari ' + st.jml + (musy ? ' anggota' : ibu ? ' peserta perempuan' : ' peserta') + '</div></div>' +
         '<div class="card stat" style="display:flex;align-items:center;justify-content:space-between;gap:6px"><div><div class="stat-label">Persentase</div><div class="stat-value" style="color:var(--primary)">' + Fmt.pct(st.total, st.jml) + '</div>' +
           '<div class="stat-foot ' + (pct >= 75 ? 'ok' : pct >= 50 ? '' : 'err') + '">' + (pct >= 75 ? 'Kehadiran tinggi' : pct >= 50 ? 'Kehadiran sedang' : 'Kehadiran rendah') + '</div></div>' +
           '<svg class="ring" viewBox="0 0 60 60"><circle class="bg" cx="30" cy="30" r="' + R + '"/><circle class="fg" cx="30" cy="30" r="' + R + '" stroke-dasharray="' + C.toFixed(2) + '" stroke-dashoffset="' + (C * (1 - Math.min(100, pct) / 100)).toFixed(2) + '"/></svg></div>' +
-        (musy ? '' :
+        (musy || ibu ? '' :
         '<div class="card stat"><div class="stat-top" style="margin-bottom:4px"><span class="stat-label">Laki-laki</span><span class="dot" style="width:9px;height:9px;border-radius:50%;background:var(--chart-male)"></span></div><div class="stat-value">' + st.L + '</div><div class="stat-foot">' + sub(st.L, st.regL) + '</div></div>' +
         '<div class="card stat"><div class="stat-top" style="margin-bottom:4px"><span class="stat-label">Perempuan</span><span class="dot" style="width:9px;height:9px;border-radius:50%;background:var(--chart-female)"></span></div><div class="stat-value">' + st.P + '</div><div class="stat-foot">' + sub(st.P, st.regP) + '</div></div>') +
       '</div>' +
@@ -83,7 +83,7 @@ Pages.detail = {
         '<div class="wa-bubble">' + Report.toHtml(text) + '</div>' +
         '<div class="btn-row" style="margin-top:12px"><button class="btn btn-primary" data-act="copy">' + ic('copy', 18) + 'Salin Laporan</button>' +
         '<button class="btn btn-secondary" data-act="share">' + ic('share-2', 18) + 'Bagikan ke WA</button></div></div>' +
-      '<div class="card" style="margin-top:12px"><div class="card-head" style="margin-bottom:12px"><h3>Laporan PDF</h3><span class="sub">' + (musy ? 'Notulen + daftar hadir' : 'Daftar hadir L / P') + '</span></div>' +
+      '<div class="card" style="margin-top:12px"><div class="card-head" style="margin-bottom:12px"><h3>Laporan PDF</h3><span class="sub">' + (musy ? 'Notulen + daftar hadir' : ibu ? 'Daftar hadir perempuan' : 'Daftar hadir L / P') + '</span></div>' +
         (pdfOld ? '<div class="banner warn" style="margin-bottom:12px">' + ic('triangle-alert', 20) + '<div><b>PDF perlu diperbarui</b> — ' + (musy ? 'presensi atau notulen' : 'presensi') + ' diubah setelah PDF dibuat.</div></div>' : '') +
         '<div class="btn-row"><button class="btn ' + (kg.pdf && !pdfOld ? 'btn-secondary' : 'btn-primary') + '" data-act="pdf"' + (busyPdf ? ' disabled' : '') + '>' +
           (busyPdf ? ic('refresh-cw', 18, 'spin') + 'Membuat PDF…' : ic(kg.pdf ? 'refresh-cw' : 'file-text', 18) + (kg.pdf ? 'Perbarui PDF' : 'Buat PDF')) + '</button>' +

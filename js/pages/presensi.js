@@ -14,7 +14,7 @@ function kegiatanCard(k, opt) {
     '<div class="att-box"><div class="row1"><span class="num">Hadir ' + st.total + '/' + st.jml + '</span><span class="pct num">' + Fmt.pct(st.total, st.jml) + '</span></div>' +
       '<div class="progress"><span style="width:' + Math.min(100, st.pct).toFixed(1) + '%"></span></div>' +
       '<div class="row2"><span>Dibuat oleh ' + esc(Store.nameOf(k.by)) + '</span>' +
-        (isMusy(k) ? '<span>' + (k.notulen ? ic('notebook-pen', 14) + ' Notulen ✓' : 'Notulen belum diisi') + '</span>' : '<span class="num">L ' + st.L + ' · P ' + st.P + '</span>') + '</div></div>' +
+        (isMusy(k) ? '<span>' + (k.notulen ? ic('notebook-pen', 14) + ' Notulen ✓' : 'Notulen belum diisi') + '</span>' : isIbu(k) ? '<span>Khusus perempuan</span>' : '<span class="num">L ' + st.L + ' · P ' + st.P + '</span>') + '</div></div>' +
     (draft
       ? '<button class="btn ' + (opt.active ? 'btn-primary' : 'btn-secondary') + ' btn-block" style="margin-top:14px" data-go="#/absen/' + esc(k.id) + '">' + (opt.active ? 'Lanjutkan Absen ' + ic('arrow-right', 18) : 'Buka') + '</button>'
       : '<button class="btn btn-secondary btn-block" style="margin-top:14px" data-go="#/detail/' + esc(k.id) + '">Lihat Detail &amp; Laporan</button>') +
@@ -57,7 +57,8 @@ Pages.kegiatan = {
       '<form class="pad" novalidate id="kgForm">' +
         '<div class="field js-jenisf"><div class="label"><span>Jenis Kegiatan<span class="req">*</span></span></div>' +
           '<div class="seg" role="radiogroup" id="kgJenis"><button type="button" role="radio" data-j="SAMBUNG">' + ic('users', 18) + 'Sambung</button>' +
-          '<button type="button" role="radio" data-j="MUSYAWAROH">' + ic('messages-square', 18) + 'Musyawaroh</button></div>' +
+          '<button type="button" role="radio" data-j="MUSYAWAROH">' + ic('messages-square', 18) + 'Musyawaroh</button>' +
+          '<button type="button" role="radio" data-j="IBU">' + ic('users-round', 18) + 'Ibu-ibu</button></div>' +
           '<div class="help js-jenishelp"></div></div>' +
         '<div class="field"><div class="label"><span><span class="js-tlabel">Tingkat Sambung</span><span class="req">*</span></span></div>' +
           '<div class="seg" role="radiogroup" id="kgTingkat">' + ['Kelompok', 'Desa', 'Daerah'].map((t) => '<button type="button" role="radio" data-t="' + t + '">' + t + '</button>').join('') + '</div></div>' +
@@ -96,9 +97,9 @@ Pages.kegiatan = {
     const editId = params[0] === 'ubah' ? params[1] : null;
     const kg = editId ? S.kegiatan.get(editId) : null;
     this.editId = kg ? kg.id : null;
-    $('.js-head', el).innerHTML = UI.focusHead({ title: kg ? 'Ubah Kegiatan' : 'Kegiatan Baru', sub: kg ? kg.judul : 'Sambung atau musyawaroh' });
+    $('.js-head', el).innerHTML = UI.focusHead({ title: kg ? 'Ubah Kegiatan' : 'Kegiatan Baru', sub: kg ? kg.judul : 'Sambung, musyawaroh, atau pengajian ibu-ibu' });
     $('.js-jenisf', el).hidden = !!kg;                       // jenis tidak bisa diubah setelah dibuat
-    this.setJenis(kg ? (kg.jenis || 'SAMBUNG') : (params[0] === 'musyawaroh' ? MUSY : LS.get('lastJenis', 'SAMBUNG')));
+    this.setJenis(kg ? jenisOk(kg.jenis) : (params[0] === 'musyawaroh' ? MUSY : params[0] === 'ibu' ? IBU : LS.get('lastJenis', 'SAMBUNG')));
     $('#kgSave', el).innerHTML = kg ? ic('check', 20) + 'Simpan Perubahan' : 'Simpan &amp; Mulai Absen ' + ic('arrow-right', 20);
     const last = LS.get('lastTingkat', 'Kelompok');
     this.setTingkat(kg ? kg.tingkat : last);
@@ -118,20 +119,21 @@ Pages.kegiatan = {
     $('.js-jamnow', this.el).hidden = !!v;
   },
   setJenis(j) {
-    this.jenis = j === MUSY ? MUSY : 'SAMBUNG';
-    const m = this.jenis === MUSY, el = this.el;
+    this.jenis = jenisOk(j);
+    const m = this.jenis === MUSY, ibu = this.jenis === IBU, el = this.el;
     $$('#kgJenis [data-j]', el).forEach((b) => { const on = b.dataset.j === this.jenis; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
-    $('.js-tlabel', el).textContent = m ? 'Tingkat Musyawaroh' : 'Tingkat Sambung';
+    $('.js-tlabel', el).textContent = m ? 'Tingkat Musyawaroh' : ibu ? 'Tingkat Pengajian' : 'Tingkat Sambung';
     const n = Store.anggotaAll().length;
     $('.js-jenishelp', el).innerHTML = m
       ? (n ? 'Yang diabsen: ' + n + ' anggota musyawaroh (sesuai dapukan). Notulen bisa ditulis saat absen.'
            : '<span class="error-text" style="display:inline">Belum ada anggota musyawaroh.</span> ' + (Store.isUtama() ? 'Atur di Lainnya → Dapukan Musyawaroh.' : 'Minta Penerobos Utama mengatur dapukan.'))
+      : ibu ? '<b>Pengajian Ibu-ibu</b> — yang diabsen hanya peserta perempuan (' + Store.pesertaAktif().filter((p) => p.jk === 'P').length + ' orang).'
       : 'Yang diabsen: semua peserta sambung.';
-    $('#kgJudul', el).placeholder = m ? 'contoh: Musyawaroh Bulanan' : 'contoh: Pengajian Rutin';
+    $('#kgJudul', el).placeholder = m ? 'contoh: Musyawaroh Bulanan' : ibu ? 'contoh: Pengajian Ibu-ibu Rutin' : 'contoh: Pengajian Rutin';
     if (!this.editId) this.suggest();
   },
   suggest() {
-    const el = this.el, list = this.jenis === MUSY ? Store.kegiatanMusy() : Store.kegiatanSambung();
+    const el = this.el, list = Store.kegiatanJenis(this.jenis);
     const uniq = (f) => [...new Set(list.map((k) => k[f]).filter(Boolean))].slice(0, 12);
     $('#dlJudul', el).innerHTML = uniq('judul').map((v) => '<option value="' + esc(v) + '">').join('');
     $('#dlTempat', el).innerHTML = [...new Set(Store.kegiatanAll().map((k) => k.tempat).filter(Boolean))].slice(0, 12).map((v) => '<option value="' + esc(v) + '">').join('');

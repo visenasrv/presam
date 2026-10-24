@@ -37,7 +37,7 @@ Pages.lainnya = {
     const me = S.me || {}, utama = Store.isUtama();
     const pnr = Object.values(S.pnr).filter((p) => p.aktif).sort((a, b) => (a.peran === 'UTAMA' ? -1 : b.peran === 'UTAMA' ? 1 : collator.compare(a.nama, b.nama)));
     const row = (act, icon, title, sub, green) => '<button class="settings-row" data-act="' + act + '"><span class="s-ic ' + (green ? 'green' : '') + '">' + ic(icon, 20) + '</span><span class="row-main"><span class="s-title" style="display:block">' + title + '</span>' + (sub ? '<span class="s-sub" style="display:block">' + sub + '</span>' : '') + '</span>' + ic('chevron-right', 18, 'chev') + '</button>';
-    const tpl = S.cfg.template_wa === DEFAULT_TEMPLATE_WA && (S.cfg.template_musy || DEFAULT_TEMPLATE_MUSY) === DEFAULT_TEMPLATE_MUSY ? 'Template bawaan' : 'Template khusus';
+    const tpl = JENIS.every((j) => Report.template(j) === Pages.format.def(j)) ? 'Template bawaan' : 'Template khusus';
     const warna = Tema.valid(S.cfg.tema_warna) ? S.cfg.tema_warna.toUpperCase() : Tema.DEFAULT;
     const wNama = (Tema.PRESETS.find((p) => p[1] === warna) || ['Warna khusus'])[0];
     const nDk = Store.dapukanList().length, nAg = Store.anggotaAll().length;
@@ -54,7 +54,7 @@ Pages.lainnya = {
       (utama ? '<div class="card"><div class="card-label">Pengaturan <span class="badge-utama" style="height:22px;font-size:10.5px">Penerobos Utama</span></div>' +
         row('kelompok', 'building-2', 'Nama Kelompok', esc(S.cfg.nama_kelompok || '—'), true) +
         '<a class="settings-row highlight" href="#/format" style="color:inherit;margin:4px 0"><span class="s-ic" style="background:var(--primary);color:var(--on-primary)">' + ic('message-square', 20) + '</span><span class="row-main"><span class="s-title" style="display:block">Format Laporan WA/PDF</span>' +
-          '<span class="s-sub" style="display:block">Sambung &amp; musyawaroh · ' + tpl + ' · PDF ' + (S.cfg.pdf_tampilkan_tidak_hadir ? 'dengan' : 'tanpa') + ' daftar tidak hadir</span></span><span class="btn-text" style="padding:0">Atur</span>' + ic('chevron-right', 18, 'chev') + '</a>' +
+          '<span class="s-sub" style="display:block">Sambung, musyawaroh &amp; ibu-ibu · ' + tpl + ' · PDF ' + (S.cfg.pdf_tampilkan_tidak_hadir ? 'dengan' : 'tanpa') + ' daftar tidak hadir</span></span><span class="btn-text" style="padding:0">Atur</span>' + ic('chevron-right', 18, 'chev') + '</a>' +
         '<a class="settings-row" href="#/dapukan" style="color:inherit"><span class="s-ic green">' + ic('users-round', 20) + '</span><span class="row-main"><span class="s-title" style="display:block">Dapukan Musyawaroh</span>' +
           '<span class="s-sub" style="display:block">' + nDk + ' dapukan · ' + nAg + ' anggota</span></span>' + ic('chevron-right', 18, 'chev') + '</a>' +
         '<button class="settings-row" data-act="warna"><span class="s-ic" style="background:var(--primary);color:var(--on-primary)">' + ic('palette', 20) + '</span><span class="row-main"><span class="s-title" style="display:block">Warna Aplikasi</span>' +
@@ -320,12 +320,12 @@ Pages.lainnya = {
 /* ---------- Format Laporan (Sambung & Musyawaroh) ---------- */
 Pages.format = {
   focus: true, utama: true, jenis: 'SAMBUNG', drafts: {},
-  def(j) { return j === MUSY ? DEFAULT_TEMPLATE_MUSY : DEFAULT_TEMPLATE_WA; },
-  saved(j) { return j === MUSY ? (S.cfg.template_musy || DEFAULT_TEMPLATE_MUSY) : (S.cfg.template_wa || DEFAULT_TEMPLATE_WA); },
-  tokens() { return this.jenis === MUSY ? Report.TOKENS_MUSY : Report.TOKENS; },
+  def(j) { return j === MUSY ? DEFAULT_TEMPLATE_MUSY : j === IBU ? DEFAULT_TEMPLATE_IBU : DEFAULT_TEMPLATE_WA; },
+  saved(j) { return Report.template(j); },
+  tokens() { return Report.tokens(this.jenis); },
   mount(el) {
     el.innerHTML = '<div class="js-head"></div><div class="pad">' +
-      '<div class="seg js-fj" style="margin-bottom:6px"><button type="button" data-fj="SAMBUNG">' + ic('users', 17) + 'Sambung</button><button type="button" data-fj="MUSYAWAROH">' + ic('messages-square', 17) + 'Musyawaroh</button></div>' +
+      '<div class="seg js-fj" style="margin-bottom:6px"><button type="button" data-fj="SAMBUNG">' + ic('users', 17) + 'Sambung</button><button type="button" data-fj="MUSYAWAROH">' + ic('messages-square', 17) + 'Musyawaroh</button><button type="button" data-fj="IBU">' + ic('users-round', 17) + 'Ibu-ibu</button></div>' +
       '<div class="section-label" style="margin-top:12px"><span class="js-tl">Template WhatsApp</span><span class="aside">Mendukung *tebal* &amp; emoji</span></div>' +
       '<div class="editor"><div class="editor-back js-back" aria-hidden="true"></div><textarea class="js-tpl" spellcheck="false" aria-label="Template laporan WhatsApp"></textarea></div>' +
       '<div class="card" style="margin-top:12px"><div class="card-head" style="margin-bottom:10px"><span style="display:inline-flex;gap:6px;align-items:center;font-weight:600;font-size:14px">' + ic('tag', 16) + 'Ketuk untuk menyisipkan penanda</span><span class="sub js-tn" style="color:var(--primary);font-weight:600"></span></div>' +
@@ -354,15 +354,15 @@ Pages.format = {
   show(el, params) {
     const d = LS.get('tplDrafts', null) || {};
     const old = LS.get('tplDraft', null);                          // draf versi lama
-    this.drafts = { SAMBUNG: d.SAMBUNG || old || this.saved('SAMBUNG'), MUSYAWAROH: d.MUSYAWAROH || this.saved(MUSY) };
+    this.drafts = { SAMBUNG: d.SAMBUNG || old || this.saved('SAMBUNG'), MUSYAWAROH: d.MUSYAWAROH || this.saved(MUSY), IBU: d.IBU || this.saved(IBU) };
     $('.js-pdf', el).checked = !!S.cfg.pdf_tampilkan_tidak_hadir;
-    this.setJenis(params[0] === 'musyawaroh' ? MUSY : 'SAMBUNG');
+    this.setJenis(params[0] === 'musyawaroh' ? MUSY : params[0] === 'ibu' ? IBU : 'SAMBUNG');
     if (params[0] === 'pdf') setTimeout(() => $('#pdfOpt', el).scrollIntoView({ behavior: 'smooth', block: 'start' }), 220);
   },
   setJenis(j) {
-    this.jenis = j === MUSY ? MUSY : 'SAMBUNG';
+    this.jenis = jenisOk(j);
     $$('[data-fj]', this.el).forEach((b) => b.classList.toggle('on', b.dataset.fj === this.jenis));
-    $('.js-tl', this.el).textContent = this.jenis === MUSY ? 'Template WhatsApp · Musyawaroh' : 'Template WhatsApp · Sambung';
+    $('.js-tl', this.el).textContent = 'Template WhatsApp · ' + (this.jenis === MUSY ? 'Musyawaroh' : this.jenis === IBU ? 'Pengajian Ibu-ibu' : 'Sambung');
     const tk = this.tokens();
     $('.js-tokens', this.el).innerHTML = tk.map((t) => '<button class="token ' + (/tidak_hadir/.test(t) ? 'muted' : '') + '" data-tok="' + t + '">{' + t + '}</button>').join('');
     $('.js-tn', this.el).textContent = tk.length + ' tersedia';
@@ -370,20 +370,20 @@ Pages.format = {
     this.update();
   },
   dirty() {
-    return this.drafts.SAMBUNG !== this.saved('SAMBUNG') || this.drafts.MUSYAWAROH !== this.saved(MUSY) || $('.js-pdf', this.el).checked !== !!S.cfg.pdf_tampilkan_tidak_hadir;
+    return JENIS.some((j) => this.drafts[j] !== this.saved(j)) || $('.js-pdf', this.el).checked !== !!S.cfg.pdf_tampilkan_tidak_hadir;
   },
   update() {
     const v = this.ta.value, known = new Set(this.tokens());
     this.back.innerHTML = esc(v).replace(/\{(\w+)\}/g, (m, k) => (known.has(k) ? '<mark>' + m + '</mark>' : m)) + '\n';
     this.ta.style.height = 'auto';
     this.ta.style.height = Math.max(330, this.ta.scrollHeight) + 'px';
-    const m = this.jenis === MUSY, kg = (m ? Store.kegiatanMusy() : Store.kegiatanSambung())[0];
-    $('.js-preview', this.el).innerHTML = Report.toHtml(Report.render(v, kg ? Report.vars(kg) : m ? Report.sampleMusy() : Report.sampleVars()));
-    $('.js-pvsrc', this.el).textContent = kg ? (m ? 'Musyawaroh terakhir' : 'Kegiatan terakhir') : 'Contoh data';
+    const j = this.jenis, kg = Store.kegiatanJenis(j)[0];
+    $('.js-preview', this.el).innerHTML = Report.toHtml(Report.render(v, kg ? Report.vars(kg) : j === MUSY ? Report.sampleMusy() : j === IBU ? Report.sampleIbu() : Report.sampleVars()));
+    $('.js-pvsrc', this.el).textContent = kg ? (j === MUSY ? 'Musyawaroh terakhir' : j === IBU ? 'Pengajian ibu-ibu terakhir' : 'Kegiatan terakhir') : 'Contoh data';
     const d = this.dirty();
     $('.js-head', this.el).innerHTML = UI.focusHead({ title: 'Format Laporan WA/PDF', sub: 'Template sambung, musyawaroh & opsi PDF', right: d ? '<span class="pill ok">' + ic('save', 14) + 'Belum disimpan</span>' : '' });
     const keep = {};
-    ['SAMBUNG', MUSY].forEach((j) => { if (this.drafts[j] !== this.saved(j)) keep[j] = this.drafts[j]; });
+    JENIS.forEach((j) => { if (this.drafts[j] !== this.saved(j)) keep[j] = this.drafts[j]; });
     if (Object.keys(keep).length) LS.set('tplDrafts', keep); else LS.del('tplDrafts');
     LS.del('tplDraft');
   },
@@ -399,6 +399,7 @@ Pages.format = {
     const ops = [];
     if (this.drafts.SAMBUNG !== S.cfg.template_wa) ops.push(['settings.set', 'cfg:template_wa', { key: 'template_wa', value: this.drafts.SAMBUNG }]);
     if (this.drafts.MUSYAWAROH !== (S.cfg.template_musy || DEFAULT_TEMPLATE_MUSY)) ops.push(['settings.set', 'cfg:template_musy', { key: 'template_musy', value: this.drafts.MUSYAWAROH }]);
+    if (this.drafts.IBU !== (S.cfg.template_ibu || DEFAULT_TEMPLATE_IBU)) ops.push(['settings.set', 'cfg:template_ibu', { key: 'template_ibu', value: this.drafts.IBU }]);
     const pdf = $('.js-pdf', this.el).checked;
     if (pdf !== !!S.cfg.pdf_tampilkan_tidak_hadir) ops.push(['settings.set', 'cfg:pdf_tampilkan_tidak_hadir', { key: 'pdf_tampilkan_tidak_hadir', value: pdf }]);
     if (ops.length) await Store.mutateMany(ops);

@@ -7,6 +7,8 @@ const Report = {
   TOKENS: ['tingkat', 'judul', 'nama_kelompok', 'hari_tanggal', 'jam', 'tempat', 'jumlah_peserta', 'jumlah_hadir',
            'persentase', 'jumlah_hadir_l', 'jumlah_hadir_p', 'daftar_hadir_l', 'daftar_hadir_p',
            'jumlah_tidak_hadir', 'daftar_tidak_hadir_l', 'daftar_tidak_hadir_p'],
+  TOKENS_IBU: ['tingkat', 'judul', 'nama_kelompok', 'hari_tanggal', 'jam', 'tempat', 'jumlah_peserta', 'jumlah_hadir',
+               'persentase', 'daftar_hadir', 'jumlah_tidak_hadir', 'daftar_tidak_hadir'],
   TOKENS_MUSY: ['tingkat', 'judul', 'nama_kelompok', 'hari_tanggal', 'jam', 'tempat', 'jumlah_anggota', 'jumlah_hadir',
                 'persentase', 'daftar_hadir', 'jumlah_tidak_hadir', 'daftar_tidak_hadir', 'notulen'],
 
@@ -23,6 +25,7 @@ const Report = {
     const st = Store.stats(kg.id) || { L: 0, P: 0, total: 0, jml: 0 };
     const h = Store.hadirNames(kg.id), a = Store.absenNames(kg.id);
     return {
+      daftar_hadir: this.list(h.P.concat(h.L)), daftar_tidak_hadir: this.list(a.P),
       tingkat: kg.tingkat, judul: kg.judul, nama_kelompok: S.cfg.nama_kelompok || '',
       hari_tanggal: Fmt.long(kg.tanggal), jam: kg.jam, tempat: kg.tempat,
       jumlah_peserta: String(st.jml), jumlah_hadir: String(st.total), persentase: Fmt.pct(st.total, st.jml),
@@ -54,7 +57,12 @@ const Report = {
       notulen: (kg.notulen || '').trim() || '-'
     };
   },
-  template(jenis) { return jenis === MUSY ? (S.cfg.template_musy || DEFAULT_TEMPLATE_MUSY) : (S.cfg.template_wa || DEFAULT_TEMPLATE_WA); },
+  template(jenis) {
+    if (jenis === MUSY) return S.cfg.template_musy || DEFAULT_TEMPLATE_MUSY;
+    if (jenis === IBU) return S.cfg.template_ibu || DEFAULT_TEMPLATE_IBU;
+    return S.cfg.template_wa || DEFAULT_TEMPLATE_WA;
+  },
+  tokens(jenis) { return jenis === MUSY ? this.TOKENS_MUSY : jenis === IBU ? this.TOKENS_IBU : this.TOKENS; },
   text(kg) { return this.render(this.template(kg.jenis), this.vars(kg)); },
 
   /** Contoh data untuk pratinjau template bila belum ada kegiatan. */
@@ -65,6 +73,10 @@ const Report = {
       persentase: '49,3%', jumlah_hadir_l: '34', jumlah_hadir_p: '40', daftar_hadir_l: '1. Abdullah Pratama\n2. Achmad Syarifuddin',
       daftar_hadir_p: '1. Annisa Bella\n2. Dewi Sartika', jumlah_tidak_hadir: '76', daftar_tidak_hadir_l: '1. Adnan Maulana', daftar_tidak_hadir_p: '1. Fatimah Zahra'
     };
+  },
+  sampleIbu() {
+    return Object.assign(this.sampleVars(), { tingkat: 'Kelompok', judul: 'Pengajian Ibu-ibu Rutin', jumlah_peserta: '18', jumlah_hadir: '14', persentase: '77,8%',
+      daftar_hadir: '1. Aisyah Putri\n2. Annisa Rahma\n3. Dewi Lestari', jumlah_tidak_hadir: '4', daftar_tidak_hadir: '1. Fatimah Zahra' });
   },
   sampleMusy() {
     return {

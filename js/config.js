@@ -6,5 +6,5 @@
  * (Kode Kelompok). Lihat PANDUAN-SATU-SITUS-BANYAK-KLIEN.md.
  */
 window.APP_CONFIG = {
-  APP_VERSION: '1.2.0'
+  APP_VERSION: '1.3.0'
 };

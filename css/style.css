@@ -720,3 +720,11 @@ details.dk-absent .dk-names span { background: var(--surface-2); border-color: v
 .login .tg-line .tg-link { color: var(--primary); font-family: var(--font-sans); }
 .login .tg-line + .pin-label { margin-top: 24px; }
 .pwa-bar { bottom: calc(var(--bottomnav-h) + var(--safe-b) + 40px) !important; }
+
+/* ---------- v1.3 · Pengajian Ibu-ibu ---------- */
+.pill.ibu { background: var(--female-bg); color: var(--female-fg); }
+.musy-sum .stat-ic.ibu { background: var(--female-bg); color: var(--female-fg); }
+.tabs.one { grid-template-columns: 1fr; }
+.seg button { min-width: 0; }
+#kgJenis button, .js-fj button { font-size: 14px; gap: 5px; padding: 0 4px; }
+@media (max-width: 420px) { #kgJenis button .ic, .js-fj button .ic { display: none; } #kgJenis button, .js-fj button { font-size: 14.5px; } }

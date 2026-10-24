@@ -6,7 +6,7 @@
    • Naikkan VERSION setiap kali memperbarui berkas di GitHub → muncul
      banner "Versi baru tersedia" di HP pengguna
    ===================================================================== */
-const VERSION = 'ps-v1.2.0';
+const VERSION = 'ps-v1.3.0';
 const SPA = true;
 const OFFLINE_PAGE = 'offline.html';
 const REGISTRY = 'klien.json';
